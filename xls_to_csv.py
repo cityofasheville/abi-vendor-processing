@@ -20,7 +20,7 @@ else:
 
 sh = book.sheet_by_index(0)
 
-fmt = "Reading worksheet {0} with {1} rows, {2} columns"
+fmt = 'Reading worksheet {0} with {1} rows, {2} columns'
 print(fmt.format(sh.name, sh.nrows, sh.ncols))
 
 with open(outputFileName, 'w', newline='') as csvfile:
@@ -31,10 +31,13 @@ with open(outputFileName, 'w', newline='') as csvfile:
         cols.append(sh.cell_value(rowx=rx, colx=i))
       ww.writerow(cols)
 
+# Verify that the number of rows matches
 rowCount = 0
 with open(outputFileName, newline='') as csvfile:
-  csvFile = csv.reader(csvfile)
-  for row in csvFile:
-    i = i + 1
-print('Total rows in output file: ', i)
+  rr = csv.reader(csvfile)
+  for row in rr:
+    rowCount = rowCount + 1
 
+if rowCount != sh.nrows:
+  fmt = 'Output row count ({0}) does not match input row count ({1})'
+  print(fmt.format(rowCount, sh.nrows))
