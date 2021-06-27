@@ -47,6 +47,7 @@ import os
 #  contact_phone
 #  contact_email
 #  email_addresses
+#  notes
 
 includedCounties = ['BUNCOMBE', 'MADISON', 'HENDERSON', 'HAYWOOD', 'JACKSON', 'TRANSYLVANIA', 'POLK', 'RUTHERFORD', 'MCDOWELL', 'YANCEY']
 
@@ -100,7 +101,8 @@ with open(outputFileName, 'w', newline='') as csvfile:
         'contact_name': None,
         'contact_phone': None,
         'contact_email': None,
-        'email_addresses': None
+        'email_addresses': None,
+        'notes': None
       }
       for i in range(sh.ncols):
         cols.append(sh.cell_value(rowx=rx, colx=i))
@@ -137,7 +139,7 @@ with open(outputFileName, 'w', newline='') as csvfile:
       if not skip:
         rows.append(rec)
 #      ww.writerow(cols)
-print('Total rows ' + str(len(rows)) + ', skipped ' + str(skipped))
+print('Total rows output ' + str(len(rows)))
 
 # now we will open a file for writing
 data_file = open(outputFileName, 'w')
