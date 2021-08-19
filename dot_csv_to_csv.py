@@ -50,6 +50,7 @@ import os
 #  contact_phone
 #  contact_email
 #  email_addresses
+#  vendor_county
 
 includedCounties = ['BUNCOMBE', 'MADISON', 'HENDERSON', 'HAYWOOD', 'JACKSON', 'TRANSYLVANIA', 'POLK', 'RUTHERFORD', 'MCDOWELL', 'YANCEY']
 
@@ -86,6 +87,7 @@ with open(inputFileName, 'r') as inputFile:
         'vendor_name': None,
         'commodity_code': None,
         'commodity_code_description': None,
+        'coa_certified': 'FALSE',
         'bbe': 'FALSE',
         'wbe': 'FALSE',
         'hbe': 'FALSE',
@@ -99,12 +101,12 @@ with open(inputFileName, 'r') as inputFile:
         'vendor_city': None,
         'vendor_state': None,
         'vendor_zip': None,
-        'vendor_county': None,
         'contact_name': None,
         'contact_phone': None,
         'contact_email': None,
         'email_addresses': None,
-        'notes': None
+        'notes': None,
+        'vendor_county': None
       }
 
       rec['vendor_name'] = row[0].strip()

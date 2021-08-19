@@ -48,6 +48,7 @@ import os
 #  contact_email
 #  email_addresses
 #  notes
+#  vendor_county
 
 includedCounties = ['BUNCOMBE', 'MADISON', 'HENDERSON', 'HAYWOOD', 'JACKSON', 'TRANSYLVANIA', 'POLK', 'RUTHERFORD', 'MCDOWELL', 'YANCEY']
 
@@ -84,6 +85,7 @@ with open(outputFileName, 'w', newline='') as csvfile:
         'vendor_name': None,
         'commodity_code': None,
         'commodity_code_description': None,
+        'coa_certified': 'FALSE',
         'bbe': 'FALSE',
         'wbe': 'FALSE',
         'hbe': 'FALSE',
@@ -97,12 +99,12 @@ with open(outputFileName, 'w', newline='') as csvfile:
         'vendor_city': None,
         'vendor_state': None,
         'vendor_zip': None,
-        'vendor_county': None,
         'contact_name': None,
         'contact_phone': None,
         'contact_email': None,
         'email_addresses': None,
-        'notes': None
+        'notes': None,
+        'vendor_county': None
       }
       for i in range(sh.ncols):
         cols.append(sh.cell_value(rowx=rx, colx=i))
