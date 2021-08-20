@@ -1,6 +1,9 @@
-# Asheville Business Inclusion Vendor Processing
-Scripts to process vendor lists for the ABI program.
+# Data Processing Scripts for the City of Asheville
+Scripts to clean up or process a variety of data sources. Current set includes:
 
- - __xls_to_csv__: Convert old XLS file to CSV (needed for HUB download)
- - __hub_xls_to_csv.py__: Convert downloaded HUB XLS file to CSV, selecting only the demographic categories we use and only from the 10-county region.
+* [ABI Vendor processing](./abi-vendor-processing) - process vendor data from NC Historically Underutilized Businesses and NC DOT sites to identify potential MWBEs
+* [HMIS CoC System Performance Measures](./hmis-system-performance) - process homelessness performance data from HMIS
+
+
+
 
