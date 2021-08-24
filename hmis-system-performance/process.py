@@ -19,7 +19,7 @@ def extractXlsData(sheet, skipRows, skipCols, rowCount):
     rows.append(cols)
   return rows
 
-def processM2(asset, prefix):
+def readXlsData(asset, prefix):
   skipRows = asset["skipRows"]
   skipCols = asset["skipCols"]
   rowCount = asset["rowCount"]
@@ -43,7 +43,7 @@ for nm in inputs['files']:
   if asset['active']:
     print('Process ' + nm)
     if nm == 'm2':
-      data = processM2(asset, prefix)
+      data = readXlsData(asset, prefix)
     print(data)
 
     with open(outputFileName, 'w', newline='') as csvfile:
