@@ -1,12 +1,36 @@
 {
   "prefix": "localdata",
   "files": {
-    "m2": "0701 - Exits to Permanent Housing with Return to Homelessness, Metric 2 - v9 (2).xls",
-    "m3": "0702 - Number of Homeless Persons-Metric 3.2 - v4 (2).xls",
-    "m4": "0703 - Employment and Income Growth for CoC Funded Projects Metric 4 - v7 (3).xls",
-    "m5": "0704 - Number of Persons First Time Homeless, Metric 5 - v6 (3).xls",
-    "m7": "0706 - Permanent Housing Placement-Retention Metric 7 - v11 (2).xls",
-    "m1a": "M1a.csv",
-    "m1b": "M1b.csv"
+    "m2": {
+      "filename": "0701 - Exits to Permanent Housing with Return to Homelessness, Metric 2 - v9 (2).xls",
+      "active": true,
+      "skipRows": 2,
+      "skipCols": 1,
+      "rowCount": 4
+    },
+    "m3": {
+      "filename": "0702 - Number of Homeless Persons-Metric 3.2 - v4 (2).xls",
+      "active": false
+    },
+    "m4": {
+      "filename": "0703 - Employment and Income Growth for CoC Funded Projects Metric 4 - v7 (3).xls",
+      "active": false
+    },
+    "m5": {
+      "filename": "0704 - Number of Persons First Time Homeless, Metric 5 - v6 (3).xls",
+      "active": false
+    },
+    "m7": {
+      "filename": "0706 - Permanent Housing Placement-Retention Metric 7 - v11 (2).xls",
+      "active": false
+    },
+    "m1a": {
+      "filename": "M1a.csv",
+      "active": false
+    },
+    "m1b": {
+      "filename": "M1b.csv",
+      "active": false
+    }
   }
 }
