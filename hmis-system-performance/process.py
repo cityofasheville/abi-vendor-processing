@@ -4,7 +4,7 @@ import json
 import sys
 import os
 
-def readXlsFile(asset, prefix):
+def readXlsFile(asset, prefix, nm):
   skipRows = asset["skipRows"]
   skipCols = asset["skipCols"]
   rowCount = asset["rowCount"]
@@ -33,7 +33,10 @@ def readXlsFile(asset, prefix):
           continue
         cols.append(sheet.cell_value(rowx=rx, colx=i))
       rows.append(cols)
-    outputFileName = prefix + asset["sectionName"][secNumber] + '.csv'
+    if sections == 1:
+      outputFileName = prefix + nm + '.csv'
+    else:
+      outputFileName = prefix + nm + "." + str(secNumber +1) + '.csv'
     print('\nHere is the data we read:\n')
     print(rows)
     with open(outputFileName, 'w', newline='') as csvfile:
@@ -50,11 +53,9 @@ with open('inputs.json', 'r') as inputsFile:
 prefix = './' + inputs['prefix'] + '/'
 for nm in inputs['files']:
   asset = inputs['files'][nm]
-  #outputFileName = prefix + asset["sectionName"][0] + '.csv'
   data = None
   if asset['active']:
     print('Process ' + nm)
-    #if nm == 'm2':
-    data = readXlsFile(asset, prefix)
+    data = readXlsFile(asset, prefix, nm)
   else:
     print('\nSkip ' + nm)
