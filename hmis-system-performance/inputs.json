@@ -5,33 +5,77 @@
       "filename": "0701 - Exits to Permanent Housing with Return to Homelessness, Metric 2 - v9 (2).xls",
       "sheetName": "Tab A - Summary",
       "active": true,
+      "type": "xls",
       "skipRows": 2,
       "skipCols": 1,
-      "rowCount": 4
+      "rowCount": 6,
+      "skipBetweenRows": 0,
+      "sections": 1
     },
     "m3": {
       "filename": "0702 - Number of Homeless Persons-Metric 3.2 - v4 (2).xls",
-      "active": false
+      "sheetName": "Tab A - Summary",
+      "active": true,
+      "type": "xls",
+      "skipRows": 1,
+      "skipCols": 1,
+      "rowCount": 5,
+      "skipBetweenRows": 0,
+      "sections": 1
     },
     "m4": {
       "filename": "0703 - Employment and Income Growth for CoC Funded Projects Metric 4 - v7 (3).xls",
-      "active": false
+      "sheetName": "Tab A - Summary",
+      "active": true,
+      "type": "xls",
+      "skipRows": 2,
+      "skipCols": 1,
+      "rowCount": 4,
+      "skipBetweenRows": 2,
+      "sections": 6
     },
     "m5": {
       "filename": "0704 - Number of Persons First Time Homeless, Metric 5 - v6 (3).xls",
-      "active": false
+      "sheetName": "Tab A - Summary",
+      "active": true,
+      "type": "xls",
+      "skipRows": 2,
+      "skipCols": 1,
+      "rowCount": 4,
+      "skipBetweenRows": 2,
+      "sections": 2
     },
-    "m7": {
+    "m7a": {
       "filename": "0706 - Permanent Housing Placement-Retention Metric 7 - v11 (2).xls",
-      "active": false
+     "sheetName": "Tab A - Summary",
+      "active": true,
+      "type": "xls",
+      "skipRows": 2,
+      "skipCols": 1,
+      "rowCount": 5,
+      "skipBetweenRows": 2,
+      "sections": 1
+    },
+    "m7b": {
+      "filename": "0706 - Permanent Housing Placement-Retention Metric 7 - v11 (2).xls",
+     "sheetName": "Tab A - Summary",
+      "active": true,
+      "type": "xls",
+      "skipRows": 9,
+      "skipCols": 1,
+      "rowCount": 4,
+      "skipBetweenRows": 2,
+      "sections": 2
     },
     "m1a": {
       "filename": "M1a.csv",
-      "active": false
+      "active": false,
+      "type": "csv"
     },
     "m1b": {
       "filename": "M1b.csv",
-      "active": false
+      "active": false,
+      "type": "csv"
     }
   }
 }
