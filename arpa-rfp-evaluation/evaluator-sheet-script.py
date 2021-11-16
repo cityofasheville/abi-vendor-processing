@@ -70,26 +70,44 @@ def create_one_sheet(evaluator, evaluatees):
       'destination_spreadsheet_id': evaluatorSheetId
     }).execute()
     print(response)
+    readmeSheetId = response['sheetId']
 
-    # Delete the original sheet1 and rename the first sheet to README
-    batch_update_spreadsheet_request_body = {
-        # A list of updates to apply to the spreadsheet.
-        # Requests will be applied in the order they are specified.
-        # If any request is not valid, no requests will be applied.
+    # Delete the original sheet1
+    request = sheetService.spreadsheets().batchUpdate(spreadsheetId=evaluatorSheetId, body={
         'requests': [
-          { "deleteSheet": {"sheetId": 0}},
+          { "deleteSheet": {"sheetId": 0}}
+        ]
+    })
+    response = request.execute()
+
+    # Rename the first sheet to README
+    request = sheetService.spreadsheets().batchUpdate(spreadsheetId=evaluatorSheetId, body={
+        'requests': [
           { "updateSheetProperties": {
             "properties": {
-              "sheetId": response['sheetId'],
+              "sheetId": readmeSheetId,
               "title": 'README'
             },
             "fields": 'title'
           }}
         ]
-    }
-
-    request = sheetService.spreadsheets().batchUpdate(spreadsheetId=evaluatorSheetId, body=batch_update_spreadsheet_request_body)
+    })
     response = request.execute()
+
+    # batch_update_spreadsheet_request_body = {
+    #     'requests': [
+    #       { "updateSheetProperties": {
+    #         "properties": {
+    #           "sheetId": response['sheetId'],
+    #           "title": 'README'
+    #         },
+    #         "fields": 'title'
+    #       }}
+    #     ]
+    # }
+
+    # request = sheetService.spreadsheets().batchUpdate(spreadsheetId=evaluatorSheetId, body=batch_update_spreadsheet_request_body)
+    # response = request.execute()
 
     # Now copy over the evaluation sheet for each of the assigned evaluations
 
