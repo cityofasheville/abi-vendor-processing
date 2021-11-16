@@ -8,110 +8,102 @@ from google.oauth2 import service_account
 SERVICE_ACCOUNT_FILE = 'arpa-processing-25528ff0b6f2.json'
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
 
-creds = service_account.Credentials.from_service_account_file(
-        SERVICE_ACCOUNT_FILE, scopes=SCOPES)
+creds = service_account.Credentials.from_service_account_file( SERVICE_ACCOUNT_FILE, scopes=SCOPES )
 
 
-# The ID and range of a sample spreadsheet.
+# IDs of the various spreadsheets, sheets and folders
 assignmentsSpreadsheetId = '1oy7i8HOhDbxsvsXcwRnrBUV75o3giiS1tWeJQEhP-is'
 baseEvaluatorSpreadsheetId = '1-AemNS14zBpFWeWCKqqhnbk_34FCEKTh3IfncyIYUxU'
 baseEvaluatorSpreadsheetReadmeId = 1990079504
 baseEvaluatorSpreadsheetEvaluationId = 1231958865
 
-targetEvaluatorsFolder = '103-m5FGsrgm7P5o4RUylB95LVzBWl8ht'
-
+targetEvaluatorsFolderId = '103-m5FGsrgm7P5o4RUylB95LVzBWl8ht'
 
 sheetService = build('sheets', 'v4', credentials=creds)
-
-# Call the Sheets API
-sheet = sheetService.spreadsheets()
-
-result = sheet.values().get(spreadsheetId=assignmentsSpreadsheetId,range="Eligible Proposals and Assignments!A1:L4").execute()
-
-values = result.get('values', [])
+driveService = build('drive', 'v3', credentials=creds)
 
 #############################
 
-def read_assignments(values):
+def process_assignments(values):
     values.pop(0)
     evals = {}
     for row in values:
         for name in row[5:]:
             if name not in evals.keys():
                 evals[name] = []
-                evals[name].append ({'name': row[1], 'link': row[2]})
+                evals[name].append ({'name': row[1], 'link': row[2], 'categories': row[3]})
             else:
-                evals[name].append({'name': row[1], 'link': row[2]})
+                evals[name].append({'name': row[1], 'link': row[2], 'categories': row[3]})
     return evals
 
-def create_one_sheet(evaluator, evaluatees):
-    print('Creating a sheet for ', evaluator, evaluatees)
-    # Create the spreadsheet with the name of the evaluator
-    # and get the ID
-    drive = build('drive', 'v3', credentials=creds)
-    file_metadata = {
-        'name': evaluator,
-        'parents': [targetEvaluatorsFolder],
-        'mimeType': 'application/vnd.google-apps.spreadsheet',
-    }
-    res = drive.files().create(body=file_metadata).execute()
-    evaluatorSheetId = res['id']
-    # evaluatorSheet = sheetService.spreadsheets().get(spreadsheetId=evaluatorSheetId).execute()
-    # print('EVALUATOR SHEET: ')
-    # print(evaluatorSheet)
+def copyAndRenameSheet(fromSpreadsheetId, fromSheetId, toSpreadsheetId, sheetName):
 
-    copy_sheet_to_another_spreadsheet_request_body = {
-        # The ID of the spreadsheet to copy the sheet to.
-        'destination_spreadsheet_id': evaluatorSheetId
-    }
-
-    # Copy over the README sheet
-    response = sheetService.spreadsheets().sheets().copyTo(spreadsheetId=baseEvaluatorSpreadsheetId, sheetId=baseEvaluatorSpreadsheetReadmeId, body={
-      'destination_spreadsheet_id': evaluatorSheetId
+    response = sheetService.spreadsheets().sheets().copyTo(spreadsheetId=fromSpreadsheetId, sheetId=fromSheetId, body={
+      'destination_spreadsheet_id': toSpreadsheetId
     }).execute()
-    print(response)
-    readmeSheetId = response['sheetId']
-
-    # Delete the original sheet1
-    request = sheetService.spreadsheets().batchUpdate(spreadsheetId=evaluatorSheetId, body={
-        'requests': [
-          { "deleteSheet": {"sheetId": 0}}
-        ]
-    })
-    response = request.execute()
+    newSheetId = response['sheetId']
 
     # Rename the first sheet to README
-    request = sheetService.spreadsheets().batchUpdate(spreadsheetId=evaluatorSheetId, body={
+    request = sheetService.spreadsheets().batchUpdate(spreadsheetId=toSpreadsheetId, body={
         'requests': [
           { "updateSheetProperties": {
             "properties": {
-              "sheetId": readmeSheetId,
-              "title": 'README'
+              "sheetId": newSheetId,
+              "title": sheetName
             },
             "fields": 'title'
           }}
         ]
     })
     response = request.execute()
+    return newSheetId
 
-    # batch_update_spreadsheet_request_body = {
-    #     'requests': [
-    #       { "updateSheetProperties": {
-    #         "properties": {
-    #           "sheetId": response['sheetId'],
-    #           "title": 'README'
-    #         },
-    #         "fields": 'title'
-    #       }}
-    #     ]
-    # }
+def create_one_sheet(evaluator, proposals):
+    print('Creating a spreadsheet for ', evaluator)
+    # Create the spreadsheet with the name of the evaluator
+    file_metadata = {
+        'name': evaluator,
+        'parents': [targetEvaluatorsFolderId],
+        'mimeType': 'application/vnd.google-apps.spreadsheet',
+    }
+    res = driveService.files().create(body=file_metadata).execute()
+    evaluatorSheetId = res['id']
 
-    # request = sheetService.spreadsheets().batchUpdate(spreadsheetId=evaluatorSheetId, body=batch_update_spreadsheet_request_body)
-    # response = request.execute()
+    # Copy over the README sheet
+    response = copyAndRenameSheet(baseEvaluatorSpreadsheetId,
+    baseEvaluatorSpreadsheetReadmeId,
+    evaluatorSheetId, 'README')
+
+
+    # Delete the original sheet1
+    response = sheetService.spreadsheets().batchUpdate(spreadsheetId=evaluatorSheetId, body={
+        'requests': [
+          { "deleteSheet": {"sheetId": 0}}
+        ]
+    }).execute()
 
     # Now copy over the evaluation sheet for each of the assigned evaluations
+    for proposal in proposals:
+        print('   Adding proposal: ', proposal['name'])
+        copyAndRenameSheet(baseEvaluatorSpreadsheetId,baseEvaluatorSpreadsheetEvaluationId, evaluatorSheetId, proposal['name'])
 
-evaluators = read_assignments(values)
-print(list(evaluators.keys()))
-e = list(evaluators.keys())[0]
-create_one_sheet(e, evaluators[e])
+        # Now update the cells at top
+        hyperlink = '=HYPERLINK("'+proposal['link'] + '","Link to Proposal")'
+        sheetService.spreadsheets().values().update(spreadsheetId=evaluatorSheetId, 
+        range=proposal['name']+"!B1:B4",
+        valueInputOption='USER_ENTERED', body={'values': [
+          ['Evaluator: ' + evaluator],
+          ['Project Name: ' + proposal['name']],
+          ['Categories: ' + proposal['categories']],
+          [hyperlink]
+        ]}).execute()
+
+##
+## Main program
+##
+
+result = sheetService.spreadsheets().values().get(spreadsheetId=assignmentsSpreadsheetId,range="Eligible Proposals and Assignments!A1:L4").execute()
+values = result.get('values', [])
+evaluators = process_assignments(values)
+for e in evaluators.keys():
+  create_one_sheet(e, evaluators[e])
