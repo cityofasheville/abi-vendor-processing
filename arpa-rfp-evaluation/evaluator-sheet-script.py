@@ -1,6 +1,7 @@
 
 from googleapiclient.discovery import build
 import json
+import sys
 from csv import reader
 from google.oauth2 import service_account
 
@@ -12,12 +13,12 @@ creds = service_account.Credentials.from_service_account_file( SERVICE_ACCOUNT_F
 
 
 # IDs of the various spreadsheets, sheets and folders
-assignmentsSpreadsheetId = '1oy7i8HOhDbxsvsXcwRnrBUV75o3giiS1tWeJQEhP-is'
+assignmentsSpreadsheetId = '1xrEqDmNd0jBAh_vth5ReC0DaUxFhYfKT0asQw-pF4kI' # '1oy7i8HOhDbxsvsXcwRnrBUV75o3giiS1tWeJQEhP-is'
 baseEvaluatorSpreadsheetId = '1-AemNS14zBpFWeWCKqqhnbk_34FCEKTh3IfncyIYUxU'
-baseEvaluatorSpreadsheetReadmeId = 1990079504
-baseEvaluatorSpreadsheetEvaluationId = 1231958865
+baseEvaluatorSpreadsheetReadmeId = 2068704255
+baseEvaluatorSpreadsheetEvaluationId = 159904982
 
-targetEvaluatorsFolderId = '103-m5FGsrgm7P5o4RUylB95LVzBWl8ht'
+targetEvaluatorsFolderId = '14_2ov-PiOeSAeFPYuxPuOzayMdx7L4yx' # '103-m5FGsrgm7P5o4RUylB95LVzBWl8ht'
 
 sheetService = build('sheets', 'v4', credentials=creds)
 driveService = build('drive', 'v3', credentials=creds)
@@ -58,22 +59,24 @@ def copyAndRenameSheet(fromSpreadsheetId, fromSheetId, toSpreadsheetId, sheetNam
     response = request.execute()
     return newSheetId
 
-def create_one_sheet(evaluator, proposals):
-    print('Creating a spreadsheet for ', evaluator)
-    # Create the spreadsheet with the name of the evaluator
+def createSpreadsheet(spreadsheetName, folderId):
     file_metadata = {
-        'name': evaluator,
-        'parents': [targetEvaluatorsFolderId],
+        'name': spreadsheetName,
+        'parents': [folderId],
         'mimeType': 'application/vnd.google-apps.spreadsheet',
     }
     res = driveService.files().create(body=file_metadata).execute()
-    evaluatorSheetId = res['id']
+    return res['id']
+
+def create_one_sheet(evaluator, proposals):
+    print('Creating a spreadsheet for ', evaluator)
+    # Create the spreadsheet with the name of the evaluator
+    evaluatorSheetId = createSpreadsheet(evaluator, targetEvaluatorsFolderId)
 
     # Copy over the README sheet
     response = copyAndRenameSheet(baseEvaluatorSpreadsheetId,
     baseEvaluatorSpreadsheetReadmeId,
     evaluatorSheetId, 'README')
-
 
     # Delete the original sheet1
     response = sheetService.spreadsheets().batchUpdate(spreadsheetId=evaluatorSheetId, body={
@@ -97,13 +100,28 @@ def create_one_sheet(evaluator, proposals):
           ['Categories: ' + proposal['categories']],
           [hyperlink]
         ]}).execute()
+    return evaluatorSheetId
 
 ##
 ## Main program
 ##
 
-result = sheetService.spreadsheets().values().get(spreadsheetId=assignmentsSpreadsheetId,range="Eligible Proposals and Assignments!A1:L4").execute()
+result = sheetService.spreadsheets().values().get(spreadsheetId=assignmentsSpreadsheetId,range="Eligible Proposals and Assignments!A1:L100").execute()
 values = result.get('values', [])
+
 evaluators = process_assignments(values)
+mapping = [["Name", "Sheet ID", "Sheet Link"]]
 for e in evaluators.keys():
-  create_one_sheet(e, evaluators[e])
+  eId = create_one_sheet(e, evaluators[e])
+  eUrl = "https://docs.google.com/spreadsheets/d/" + eId + "/edit"
+  mapping.append([e, eId, eUrl])
+
+# Now create the mapping spreadsheet
+mappingFileId = createSpreadsheet("Evaluator Mappings", targetEvaluatorsFolderId)
+rangeValue = "Sheet1!A1:C"+str(len(mapping))
+sheetService.spreadsheets().values().update(
+  spreadsheetId=mappingFileId,
+  range=rangeValue,
+  valueInputOption='USER_ENTERED',
+  body={'values': mapping}
+).execute()
