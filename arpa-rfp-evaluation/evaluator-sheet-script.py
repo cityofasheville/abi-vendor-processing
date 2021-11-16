@@ -106,10 +106,19 @@ def create_one_sheet(evaluator, proposals):
 ## Main program
 ##
 
+# Read the assignments spreadsheet
 result = sheetService.spreadsheets().values().get(spreadsheetId=assignmentsSpreadsheetId,range="Eligible Proposals and Assignments!A1:L100").execute()
 values = result.get('values', [])
 
+# Create a dictionary mapping evaluators to an array of proposals
+# (each proposal is a dictionary with proposal name, categories, and link)
 evaluators = process_assignments(values)
+
+# Loop through evaluators, creating a spreadsheet for each with
+# a README sheet plus one sheet per assigned proposal. As we create 
+# them, collect data (evaluator name, spreadsheet ID, and spreadsheet URL)
+# to write out to a spreadsheet mapping evaluators to their individual 
+# spreadsheets
 mapping = [["Name", "Sheet ID", "Sheet Link"]]
 for e in evaluators.keys():
   eId = create_one_sheet(e, evaluators[e])
