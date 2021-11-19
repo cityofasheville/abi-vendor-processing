@@ -32,17 +32,19 @@ matrixMap = []
 def getEvaluatorIndices():
     global evaluatorCount
     global evaluatorIndices
+    global matrixMap
     result = sheetService.spreadsheets().values().get(spreadsheetId=assignmentsSpreadsheetId,range="Evaluators!A1:A100").execute()
     tmp = result.get('values', [])
+    mmList = ['Proposal']
     evaluatorList = []
     for i in range(len(tmp)):
         evaluatorList.append(tmp[i][0])
+        mmList.append(tmp[i][0])
+    matrixMap.append(mmList)
     evaluatorCount = len(evaluatorList)
 
     for i in range(len(evaluatorList)):
         evaluatorIndices[evaluatorList[i]] = i
-    print('Count of evaluators: ', evaluatorCount)
-    print(evaluatorIndices)
 
 def process_assignments(values):
     global evaluatorCount
@@ -118,7 +120,7 @@ def create_one_sheet(evaluator, proposals):
     for proposal in proposals:
         print('   Adding proposal: ', proposal['name'])
         newSheetId = copyAndRenameSheet(baseEvaluatorSpreadsheetId,baseEvaluatorSpreadsheetEvaluationId, evaluatorSheetId, proposal['name'])
-        matrixMap[proposalIndices[proposal['name']]][evaluatorIndices[evaluator]+1] = newSheetId
+        matrixMap[proposalIndices[proposal['name']]+1][evaluatorIndices[evaluator]+1] = newSheetId
         # Now update the cells at top
         hyperlink = '=HYPERLINK("'+proposal['link'] + '","Link to Proposal")'
         sheetService.spreadsheets().values().update(spreadsheetId=evaluatorSheetId, 
@@ -162,6 +164,7 @@ print(matrixMap)
 
 # Now create the mapping spreadsheet
 mappingFileId = createSpreadsheet("Evaluator Mappings", targetEvaluatorsFolderId)
+# Write out the spreadsheet mapping tab
 rangeValue = "Sheet1!A1:C"+str(len(mapping))
 sheetService.spreadsheets().values().update(
   spreadsheetId=mappingFileId,
@@ -169,3 +172,46 @@ sheetService.spreadsheets().values().update(
   valueInputOption='USER_ENTERED',
   body={'values': mapping}
 ).execute()
+# Rename the tab
+request = sheetService.spreadsheets().batchUpdate(spreadsheetId=mappingFileId, body={
+    'requests': [
+      { "updateSheetProperties": {
+        "properties": {
+          "sheetId": 0,
+          "title": 'Sheet Mapping'
+        },
+        "fields": 'title'
+      }}
+    ]
+})
+response = request.execute()
+# Create a new tab for tab mapping
+request = sheetService.spreadsheets().batchUpdate(spreadsheetId=mappingFileId, body={
+    'requests': [{
+        'addSheet': {
+            'properties': {
+                'title': 'Tab Mapping'
+            }
+        }
+    }]
+})
+response = request.execute()
+
+# Now write out the values
+cnt = evaluatorCount
+if cnt > 25: # 25 because the first column is the proposal name
+  cnt -= 26
+  letter = 'A'+ chr(ord('A') + cnt)
+else:
+  letter = chr(ord('A') + cnt)
+rangeValue = "Tab Mapping!A1:"+letter + str(1+len(proposalIndices))
+print('rangeValue = ', rangeValue)
+
+sheetService.spreadsheets().values().update(
+  spreadsheetId=mappingFileId,
+  range=rangeValue,
+  valueInputOption='USER_ENTERED',
+  body={'values': matrixMap}
+).execute()
+
+
