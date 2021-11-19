@@ -13,22 +13,51 @@ creds = service_account.Credentials.from_service_account_file( SERVICE_ACCOUNT_F
 
 
 # IDs of the various spreadsheets, sheets and folders
-assignmentsSpreadsheetId = '1xrEqDmNd0jBAh_vth5ReC0DaUxFhYfKT0asQw-pF4kI' # '1oy7i8HOhDbxsvsXcwRnrBUV75o3giiS1tWeJQEhP-is'
+assignmentsSpreadsheetId = '1xrEqDmNd0jBAh_vth5ReC0DaUxFhYfKT0asQw-pF4kI' 
 baseEvaluatorSpreadsheetId = '1-AemNS14zBpFWeWCKqqhnbk_34FCEKTh3IfncyIYUxU'
 baseEvaluatorSpreadsheetReadmeId = 2068704255
 baseEvaluatorSpreadsheetEvaluationId = 159904982
 
-targetEvaluatorsFolderId = '14_2ov-PiOeSAeFPYuxPuOzayMdx7L4yx' # '103-m5FGsrgm7P5o4RUylB95LVzBWl8ht'
+targetEvaluatorsFolderId = '14_2ov-PiOeSAeFPYuxPuOzayMdx7L4yx'
 
 sheetService = build('sheets', 'v4', credentials=creds)
 driveService = build('drive', 'v3', credentials=creds)
 
+evaluatorCount = 0
+evaluatorIndices = {}
+proposalIndices = {}
+matrixMap = []
 #############################
 
+def getEvaluatorIndices():
+    global evaluatorCount
+    global evaluatorIndices
+    result = sheetService.spreadsheets().values().get(spreadsheetId=assignmentsSpreadsheetId,range="Evaluators!A1:A100").execute()
+    tmp = result.get('values', [])
+    evaluatorList = []
+    for i in range(len(tmp)):
+        evaluatorList.append(tmp[i][0])
+    evaluatorCount = len(evaluatorList)
+
+    for i in range(len(evaluatorList)):
+        evaluatorIndices[evaluatorList[i]] = i
+    print('Count of evaluators: ', evaluatorCount)
+    print(evaluatorIndices)
+
 def process_assignments(values):
+    global evaluatorCount
+    global matrixMap
     values.pop(0)
     evals = {}
+    proposalIndex = 0
     for row in values:
+        if len(row[1]) == 0:
+            continue
+        lst = [-1] * (evaluatorCount+1)
+        lst[0] = row[1]
+        matrixMap.append(lst)
+        proposalIndices[row[1]] = proposalIndex
+        proposalIndex += 1
         for name in row[5:]:
             if name not in evals.keys():
                 evals[name] = []
@@ -88,8 +117,8 @@ def create_one_sheet(evaluator, proposals):
     # Now copy over the evaluation sheet for each of the assigned evaluations
     for proposal in proposals:
         print('   Adding proposal: ', proposal['name'])
-        copyAndRenameSheet(baseEvaluatorSpreadsheetId,baseEvaluatorSpreadsheetEvaluationId, evaluatorSheetId, proposal['name'])
-
+        newSheetId = copyAndRenameSheet(baseEvaluatorSpreadsheetId,baseEvaluatorSpreadsheetEvaluationId, evaluatorSheetId, proposal['name'])
+        matrixMap[proposalIndices[proposal['name']]][evaluatorIndices[evaluator]+1] = newSheetId
         # Now update the cells at top
         hyperlink = '=HYPERLINK("'+proposal['link'] + '","Link to Proposal")'
         sheetService.spreadsheets().values().update(spreadsheetId=evaluatorSheetId, 
@@ -106,13 +135,17 @@ def create_one_sheet(evaluator, proposals):
 ## Main program
 ##
 
-# Read the assignments spreadsheet
+# Read the assignments spreadsheet (both evaluators and assignments)
+getEvaluatorIndices()
+
 result = sheetService.spreadsheets().values().get(spreadsheetId=assignmentsSpreadsheetId,range="Eligible Proposals and Assignments!A1:L100").execute()
 values = result.get('values', [])
 
 # Create a dictionary mapping evaluators to an array of proposals
 # (each proposal is a dictionary with proposal name, categories, and link)
 evaluators = process_assignments(values)
+
+print(matrixMap)
 
 # Loop through evaluators, creating a spreadsheet for each with
 # a README sheet plus one sheet per assigned proposal. As we create 
@@ -124,6 +157,8 @@ for e in evaluators.keys():
   eId = create_one_sheet(e, evaluators[e])
   eUrl = "https://docs.google.com/spreadsheets/d/" + eId + "/edit"
   mapping.append([e, eId, eUrl])
+
+print(matrixMap)
 
 # Now create the mapping spreadsheet
 mappingFileId = createSpreadsheet("Evaluator Mappings", targetEvaluatorsFolderId)
