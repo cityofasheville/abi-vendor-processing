@@ -14,13 +14,13 @@ creds = service_account.Credentials.from_service_account_file(
 
 
 # The ID and range of a sample spreadsheet.
-# Assignment spreadsheet
+# Links to spreadsheets generated for each of the evaluators
 EVALUATOR_LINKS_SPREADSHEET_ID = '1tAJXTaol2iNrT-ieLYyFPeaX5sUZDRoN3tz6IGR3XNc'
-# Master Spreadsheet
+# Master Output Spreadsheet
 WRITE_SPREADSHEET_ID = '1nFyGhmkFGMdq1HzzTIp6aRtTpfIxgWeKN-veUfef_Eg'
-# Old evaluation sheet with scoring info on it
+# Old evaluation sheet with scoring info on it (Master scoring Rubric sheet)
 SCORE_SPREADSHEET_ID = '1-AemNS14zBpFWeWCKqqhnbk_34FCEKTh3IfncyIYUxU'
-# Spreadsheet with just a list of links to project proposals
+# Spreadsheet with just a list of links to project proposals (Assignment sheet)
 PROJECT_LINKS_SPREADSHEET_ID = '1oy7i8HOhDbxsvsXcwRnrBUV75o3giiS1tWeJQEhP-is'
 # Spreadsheet with links to individual tabs
 EACH_TAB_SPREADSHEET_ID = '1FssUUapqP8cgZBU0t2hMOdHmagCqRBksB-dhOWjQt2k'
