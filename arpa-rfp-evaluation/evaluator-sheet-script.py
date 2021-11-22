@@ -53,17 +53,18 @@ def process_assignments(values):
     for row in values:
         if len(row[1]) == 0:
             continue
+        proposalName = str(row[0]) + ' ' + row[1]
         lst = [-1] * (evaluatorCount+1)
-        lst[0] = row[1]
+        lst[0] = proposalName
         matrixMap.append(lst)
-        proposalIndices[row[1]] = proposalIndex
+        proposalIndices[proposalName] = proposalIndex
         proposalIndex += 1
         for name in row[5:]:
             if name not in evals.keys():
                 evals[name] = []
-                evals[name].append ({'name': row[1], 'link': row[2], 'categories': row[3]})
+                evals[name].append ({'name': proposalName, 'link': row[2], 'categories': row[3]})
             else:
-                evals[name].append({'name': row[1], 'link': row[2], 'categories': row[3]})
+                evals[name].append({'name': proposalName, 'link': row[2], 'categories': row[3]})
     return evals
 
 def copyAndRenameSheet(fromSpreadsheetId, fromSheetId, toSpreadsheetId, sheetName):
