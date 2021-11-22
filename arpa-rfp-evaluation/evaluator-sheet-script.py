@@ -1,4 +1,3 @@
-
 from googleapiclient.discovery import build
 import json
 import sys
@@ -13,12 +12,11 @@ creds = service_account.Credentials.from_service_account_file( SERVICE_ACCOUNT_F
 
 
 # IDs of the various spreadsheets, sheets and folders
-assignmentsSpreadsheetId = '1xrEqDmNd0jBAh_vth5ReC0DaUxFhYfKT0asQw-pF4kI' 
-baseEvaluatorSpreadsheetId = '1xrEqDmNd0jBAh_vth5ReC0DaUxFhYfKT0asQw-pF4kI'
-baseEvaluatorSpreadsheetReadmeId = 1285419200
-baseEvaluatorSpreadsheetEvaluationId = 1023300661
+INPUTS_SPREADSHEET_ID = '1xrEqDmNd0jBAh_vth5ReC0DaUxFhYfKT0asQw-pF4kI' 
+INPUTS_README_TAB_ID = 1285419200
+INPUTS_EVAL_TEMPLATE_TAB_ID = 1023300661
 
-targetEvaluatorsFolderId = '14_2ov-PiOeSAeFPYuxPuOzayMdx7L4yx'
+TARGET_FOLDER_ID = '14_2ov-PiOeSAeFPYuxPuOzayMdx7L4yx'
 
 sheetService = build('sheets', 'v4', credentials=creds)
 driveService = build('drive', 'v3', credentials=creds)
@@ -33,7 +31,7 @@ def getEvaluatorIndices():
     global evaluatorCount
     global evaluatorIndices
     global matrixMap
-    result = sheetService.spreadsheets().values().get(spreadsheetId=assignmentsSpreadsheetId,range="Evaluators!A1:A100").execute()
+    result = sheetService.spreadsheets().values().get(spreadsheetId=INPUTS_SPREADSHEET_ID,range="Evaluators!A1:A100").execute()
     tmp = result.get('values', [])
     mmList = ['Proposal']
     evaluatorList = []
@@ -102,11 +100,11 @@ def createSpreadsheet(spreadsheetName, folderId):
 def create_one_sheet(evaluator, proposals):
     print('Creating a spreadsheet for ', evaluator)
     # Create the spreadsheet with the name of the evaluator
-    evaluatorSheetId = createSpreadsheet(evaluator, targetEvaluatorsFolderId)
+    evaluatorSheetId = createSpreadsheet(evaluator, TARGET_FOLDER_ID)
 
     # Copy over the README sheet
-    response = copyAndRenameSheet(baseEvaluatorSpreadsheetId,
-    baseEvaluatorSpreadsheetReadmeId,
+    response = copyAndRenameSheet(INPUTS_SPREADSHEET_ID,
+    INPUTS_README_TAB_ID,
     evaluatorSheetId, 'README')
 
     # Delete the original sheet1
@@ -119,7 +117,7 @@ def create_one_sheet(evaluator, proposals):
     # Now copy over the evaluation sheet for each of the assigned evaluations
     for proposal in proposals:
         print('   Adding proposal: ', proposal['name'])
-        newSheetId = copyAndRenameSheet(baseEvaluatorSpreadsheetId,baseEvaluatorSpreadsheetEvaluationId, evaluatorSheetId, proposal['name'])
+        newSheetId = copyAndRenameSheet(INPUTS_SPREADSHEET_ID,INPUTS_EVAL_TEMPLATE_TAB_ID, evaluatorSheetId, proposal['name'])
         matrixMap[proposalIndices[proposal['name']]+1][evaluatorIndices[evaluator]+1] = newSheetId
         # Now update the cells at top
         hyperlink = '=HYPERLINK("'+proposal['link'] + '","Link to Proposal")'
@@ -140,7 +138,7 @@ def create_one_sheet(evaluator, proposals):
 # Read the assignments spreadsheet (both evaluators and assignments)
 getEvaluatorIndices()
 
-result = sheetService.spreadsheets().values().get(spreadsheetId=assignmentsSpreadsheetId,range="Eligible Proposals and Assignments!A1:L100").execute()
+result = sheetService.spreadsheets().values().get(spreadsheetId=INPUTS_SPREADSHEET_ID,range="Eligible Proposals and Assignments!A1:L100").execute()
 values = result.get('values', [])
 
 # Create a dictionary mapping evaluators to an array of proposals
@@ -163,7 +161,7 @@ for e in evaluators.keys():
 print(matrixMap)
 
 # Now create the mapping spreadsheet
-mappingFileId = createSpreadsheet("Evaluator Mappings", targetEvaluatorsFolderId)
+mappingFileId = createSpreadsheet("Evaluator Mappings", TARGET_FOLDER_ID)
 # Write out the spreadsheet mapping tab
 rangeValue = "Sheet1!A1:C"+str(len(mapping))
 sheetService.spreadsheets().values().update(
