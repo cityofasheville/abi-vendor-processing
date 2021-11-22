@@ -14,9 +14,9 @@ creds = service_account.Credentials.from_service_account_file( SERVICE_ACCOUNT_F
 
 # IDs of the various spreadsheets, sheets and folders
 assignmentsSpreadsheetId = '1xrEqDmNd0jBAh_vth5ReC0DaUxFhYfKT0asQw-pF4kI' 
-baseEvaluatorSpreadsheetId = '1-AemNS14zBpFWeWCKqqhnbk_34FCEKTh3IfncyIYUxU'
-baseEvaluatorSpreadsheetReadmeId = 2068704255
-baseEvaluatorSpreadsheetEvaluationId = 159904982
+baseEvaluatorSpreadsheetId = '1xrEqDmNd0jBAh_vth5ReC0DaUxFhYfKT0asQw-pF4kI'
+baseEvaluatorSpreadsheetReadmeId = 1285419200
+baseEvaluatorSpreadsheetEvaluationId = 1023300661
 
 targetEvaluatorsFolderId = '14_2ov-PiOeSAeFPYuxPuOzayMdx7L4yx'
 
