@@ -1,6 +1,7 @@
 from googleapiclient.discovery import build
 import json
 import sys
+import getopt
 from csv import reader
 from google.oauth2 import service_account
 
@@ -44,7 +45,10 @@ def getEvaluatorIndices():
     for i in range(len(evaluatorList)):
         evaluatorIndices[evaluatorList[i]] = i
 
-def process_assignments(values):
+def process_assignments():
+    result = sheetService.spreadsheets().values().get(spreadsheetId=INPUTS_SPREADSHEET_ID,range="Eligible Proposals and Assignments!A1:L100").execute()
+    values = result.get('values', [])
+
     global evaluatorCount
     global matrixMap
     values.pop(0)
@@ -132,85 +136,105 @@ def create_one_sheet(evaluator, proposals):
         ]}).execute()
     return evaluatorSheetId
 
+def createMappingSpreadsheet():
+    mappingFileId = createSpreadsheet("Evaluator Mappings", TARGET_FOLDER_ID)
+
+    # Write out the spreadsheet mapping tab
+    rangeValue = "Sheet1!A1:C"+str(len(mapping))
+    sheetService.spreadsheets().values().update(
+      spreadsheetId=mappingFileId,
+      range=rangeValue,
+      valueInputOption='USER_ENTERED',
+      body={'values': mapping}
+    ).execute()
+    # Rename the tab
+    request = sheetService.spreadsheets().batchUpdate(spreadsheetId=mappingFileId, body={
+        'requests': [
+          { "updateSheetProperties": {
+            "properties": {
+              "sheetId": 0,
+              "title": 'Sheet Mapping'
+            },
+            "fields": 'title'
+          }}
+        ]
+    })
+    response = request.execute()
+    # Create a new tab for tab mapping
+    request = sheetService.spreadsheets().batchUpdate(spreadsheetId=mappingFileId, body={
+        'requests': [{
+            'addSheet': {
+                'properties': {
+                    'title': 'Tab Mapping'
+                }
+            }
+        }]
+    })
+    response = request.execute()
+
+    # Now write out the values
+    cnt = evaluatorCount
+    if cnt > 25: # 25 because the first column is the proposal name
+      cnt -= 26
+      letter = 'A'+ chr(ord('A') + cnt)
+    else:
+      letter = chr(ord('A') + cnt)
+    rangeValue = "Tab Mapping!A1:"+letter + str(1+len(proposalIndices))
+    print('rangeValue = ', rangeValue)
+
+    sheetService.spreadsheets().values().update(
+      spreadsheetId=mappingFileId,
+      range=rangeValue,
+      valueInputOption='USER_ENTERED',
+      body={'values': matrixMap}
+    ).execute()
+
 ##
 ## Main program
 ##
 
-# Read the assignments spreadsheet (both evaluators and assignments)
+testing = None
+try:
+    print(sys.argv)
+    opts, args = getopt.getopt(sys.argv[1:], "t:")
+except:
+    print('evaluator-sheet-script.py [-t <testset-name>]')
+
+for opt, arg in opts:
+    print('opt = ' + opt + ' and arg = ' + arg)
+    if opt == '-t':
+        testing = arg
+print('Testing = ' + str(testing))
+
+if testing:
+    testData = None
+    print('Read the file')
+    with open('testing_data.json', 'r') as testFile:
+        testData = json.load(testFile)
+    print(testData)
+    if testing in testData:
+        testing = testData[testing]
+    else:
+        print('Could not find test set ' + testing)
+        testing = None
+
+print(testing)
+
+# Read list of evaluators and assign them indices. Then create a
+# dictionary mapping evaluators to the proposals assigned to them
 getEvaluatorIndices()
-
-result = sheetService.spreadsheets().values().get(spreadsheetId=INPUTS_SPREADSHEET_ID,range="Eligible Proposals and Assignments!A1:L100").execute()
-values = result.get('values', [])
-
-# Create a dictionary mapping evaluators to an array of proposals
-# (each proposal is a dictionary with proposal name, categories, and link)
-evaluators = process_assignments(values)
-
-print(matrixMap)
+evaluators = process_assignments()
 
 # Loop through evaluators, creating a spreadsheet for each with
-# a README sheet plus one sheet per assigned proposal. As we create 
-# them, collect data (evaluator name, spreadsheet ID, and spreadsheet URL)
-# to write out to a spreadsheet mapping evaluators to their individual 
-# spreadsheets
+# a README sheet plus one sheet per assigned proposal. 
 mapping = [["Name", "Sheet ID", "Sheet Link"]]
 for e in evaluators.keys():
   eId = create_one_sheet(e, evaluators[e])
   eUrl = "https://docs.google.com/spreadsheets/d/" + eId + "/edit"
   mapping.append([e, eId, eUrl])
 
-print(matrixMap)
-
-# Now create the mapping spreadsheet
-mappingFileId = createSpreadsheet("Evaluator Mappings", TARGET_FOLDER_ID)
-# Write out the spreadsheet mapping tab
-rangeValue = "Sheet1!A1:C"+str(len(mapping))
-sheetService.spreadsheets().values().update(
-  spreadsheetId=mappingFileId,
-  range=rangeValue,
-  valueInputOption='USER_ENTERED',
-  body={'values': mapping}
-).execute()
-# Rename the tab
-request = sheetService.spreadsheets().batchUpdate(spreadsheetId=mappingFileId, body={
-    'requests': [
-      { "updateSheetProperties": {
-        "properties": {
-          "sheetId": 0,
-          "title": 'Sheet Mapping'
-        },
-        "fields": 'title'
-      }}
-    ]
-})
-response = request.execute()
-# Create a new tab for tab mapping
-request = sheetService.spreadsheets().batchUpdate(spreadsheetId=mappingFileId, body={
-    'requests': [{
-        'addSheet': {
-            'properties': {
-                'title': 'Tab Mapping'
-            }
-        }
-    }]
-})
-response = request.execute()
-
-# Now write out the values
-cnt = evaluatorCount
-if cnt > 25: # 25 because the first column is the proposal name
-  cnt -= 26
-  letter = 'A'+ chr(ord('A') + cnt)
-else:
-  letter = chr(ord('A') + cnt)
-rangeValue = "Tab Mapping!A1:"+letter + str(1+len(proposalIndices))
-print('rangeValue = ', rangeValue)
-
-sheetService.spreadsheets().values().update(
-  spreadsheetId=mappingFileId,
-  range=rangeValue,
-  valueInputOption='USER_ENTERED',
-  body={'values': matrixMap}
-).execute()
+# Write out the mapping data associating mapping individual evaluators
+# to their spreadsheets and individual sheets to proposals
+createMappingSpreadsheet()
 
 
