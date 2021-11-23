@@ -26,6 +26,7 @@ evaluatorCount = 0
 evaluatorMax = 0
 evaluatorIndices = {}
 proposalIndices = {}
+evaluatorSheetMapping = [["Name", "Sheet ID", "Sheet Link"]]
 matrixMap = []
 
 testing = None
@@ -148,7 +149,8 @@ def create_one_sheet(evaluator, proposals):
             time.sleep(45)
 
         newSheetId = copyAndRenameSheet(INPUTS_SPREADSHEET_ID,INPUTS_EVAL_TEMPLATE_TAB_ID, evaluatorSheetId, proposal['name'])
-        matrixMap[proposalIndices[proposal['name']]+1][evaluatorIndices[evaluator]+1] = newSheetId
+        matrixMap[proposalIndices[proposal['name']]+1][evaluatorIndices[evaluator]+1] = "https://docs.google.com/spreadsheets/d/" + str(evaluatorSheetId) + "/edit#gid=" + str(newSheetId) # newSheetId
+
         # Now update the cells at top
         hyperlink = '=HYPERLINK("'+proposal['link'] + '","Link to Proposal")'
         sheetService.spreadsheets().values().update(spreadsheetId=evaluatorSheetId, 
@@ -174,15 +176,16 @@ def create_one_sheet(evaluator, proposals):
     return evaluatorSheetId
 
 def createMappingSpreadsheet():
+    global evaluatorSheetMapping
     mappingFileId = createSpreadsheet("Evaluator Mappings", TARGET_FOLDER_ID)
 
     # Write out the spreadsheet mapping tab
-    rangeValue = "Sheet1!A1:C"+str(len(mapping))
+    rangeValue = "Sheet1!A1:C"+str(len(evaluatorSheetMapping))
     sheetService.spreadsheets().values().update(
       spreadsheetId=mappingFileId,
       range=rangeValue,
       valueInputOption='USER_ENTERED',
-      body={'values': mapping}
+      body={'values': evaluatorSheetMapping}
     ).execute()
     # Rename the tab
     request = sheetService.spreadsheets().batchUpdate(spreadsheetId=mappingFileId, body={
@@ -259,12 +262,11 @@ evaluators = process_assignments()
 
 # Loop through evaluators, creating a spreadsheet for each with
 # a README sheet plus one sheet per assigned proposal. 
-mapping = [["Name", "Sheet ID", "Sheet Link"]]
 evaluatorCount = 0
 for e in evaluators.keys():
   eId = create_one_sheet(e, evaluators[e])
   eUrl = "https://docs.google.com/spreadsheets/d/" + eId + "/edit"
-  mapping.append([e, eId, eUrl])
+  evaluatorSheetMapping.append([e, eId, eUrl])
   evaluatorCount += 1
   if evaluatorCount >= maxEvaluators:
       break
