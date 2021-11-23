@@ -1,6 +1,7 @@
 from googleapiclient.discovery import build
 import json
 import sys
+import time
 import getopt
 from csv import reader
 from google.oauth2 import service_account
@@ -26,6 +27,8 @@ evaluatorCount = 0
 evaluatorIndices = {}
 proposalIndices = {}
 matrixMap = []
+
+sheetCount = 0
 #############################
 
 def getEvaluatorIndices():
@@ -103,6 +106,7 @@ def createSpreadsheet(spreadsheetName, folderId):
     return res['id']
 
 def create_one_sheet(evaluator, proposals):
+    global sheetCount
     print('Creating a spreadsheet for ', evaluator)
     # Create the spreadsheet with the name of the evaluator
     evaluatorSheetId = createSpreadsheet(evaluator, TARGET_FOLDER_ID)
@@ -122,6 +126,11 @@ def create_one_sheet(evaluator, proposals):
     # Now copy over the evaluation sheet for each of the assigned evaluations
     for proposal in proposals:
         print('   Adding proposal: ', proposal['name'])
+        sheetCount += 1
+        if sheetCount%15 == 0:
+            print('Pausing for 45 seconds ... ')
+            time.sleep(45)
+
         newSheetId = copyAndRenameSheet(INPUTS_SPREADSHEET_ID,INPUTS_EVAL_TEMPLATE_TAB_ID, evaluatorSheetId, proposal['name'])
         matrixMap[proposalIndices[proposal['name']]+1][evaluatorIndices[evaluator]+1] = newSheetId
         # Now update the cells at top
