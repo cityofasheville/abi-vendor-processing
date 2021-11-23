@@ -28,6 +28,10 @@ evaluatorIndices = {}
 proposalIndices = {}
 matrixMap = []
 
+testing = None
+maxProposals = 1000
+maxEvaluators = 1000
+
 sheetCount = 0
 #############################
 
@@ -107,9 +111,16 @@ def createSpreadsheet(spreadsheetName, folderId):
 
 def create_one_sheet(evaluator, proposals):
     global sheetCount
+    global testing
     print('Creating a spreadsheet for ', evaluator)
     # Create the spreadsheet with the name of the evaluator
     evaluatorSheetId = createSpreadsheet(evaluator, TARGET_FOLDER_ID)
+    testingData = None
+    if testing:
+        if evaluator in testing:
+            testingData = testing[evaluator]
+        elif 'default' in testing:
+            testingData = testing['default']
 
     # Copy over the README sheet
     response = copyAndRenameSheet(INPUTS_SPREADSHEET_ID,
@@ -122,11 +133,14 @@ def create_one_sheet(evaluator, proposals):
           { "deleteSheet": {"sheetId": 0}}
         ]
     }).execute()
-
+    proposalCount = 0
     # Now copy over the evaluation sheet for each of the assigned evaluations
     for proposal in proposals:
         print('   Adding proposal: ', proposal['name'])
         sheetCount += 1
+        proposalCount += 1
+        if proposalCount > maxProposals:
+            break
         if sheetCount%15 == 0:
             print('Pausing for 45 seconds ... ')
             time.sleep(45)
@@ -143,6 +157,19 @@ def create_one_sheet(evaluator, proposals):
           ['Categories: ' + proposal['categories']],
           [hyperlink]
         ]}).execute()
+        if testing and testingData:
+            data = None
+            if proposal['name'] in testingData:
+                data = testingData[proposal['name']]
+            elif 'default' in testingData:
+                data = testingData['default']
+            print('Write out test data ' + str(data))
+            if data:
+                sheetService.spreadsheets().values().update(spreadsheetId=evaluatorSheetId, 
+                range=proposal['name']+"!C7:C24",
+                valueInputOption='USER_ENTERED', body={'values': data
+                }).execute()
+
     return evaluatorSheetId
 
 def createMappingSpreadsheet():
@@ -202,22 +229,26 @@ def createMappingSpreadsheet():
 ## Main program
 ##
 
-testing = None
 try:
-    print(sys.argv)
-    opts, args = getopt.getopt(sys.argv[1:], "t:")
+    opts, args = getopt.getopt(sys.argv[1:], "t:p:e:")
 except:
-    print('evaluator-sheet-script.py [-t <testset-name>]')
+    print('Usage Error')
+    print('evaluator-sheet-script.py [-t <testset-name>] [-p <max-proposals>] [-e <max-evaluators>]')
+    sys.exit()
 
 for opt, arg in opts:
-    print('opt = ' + opt + ' and arg = ' + arg)
     if opt == '-t':
         testing = arg
+    if opt == '-p':
+        maxProposals = int(arg)
+    if opt == '-e':
+        maxEvaluators = int(arg)
+
+print(maxEvaluators)
 print('Testing = ' + str(testing))
 
 if testing:
     testData = None
-    print('Read the file')
     with open('testing_data.json', 'r') as testFile:
         testData = json.load(testFile)
     print(testData)
@@ -227,8 +258,6 @@ if testing:
         print('Could not find test set ' + testing)
         testing = None
 
-print(testing)
-
 # Read list of evaluators and assign them indices. Then create a
 # dictionary mapping evaluators to the proposals assigned to them
 getEvaluatorIndices()
@@ -237,10 +266,16 @@ evaluators = process_assignments()
 # Loop through evaluators, creating a spreadsheet for each with
 # a README sheet plus one sheet per assigned proposal. 
 mapping = [["Name", "Sheet ID", "Sheet Link"]]
+evaluatorCount = 0
 for e in evaluators.keys():
   eId = create_one_sheet(e, evaluators[e])
   eUrl = "https://docs.google.com/spreadsheets/d/" + eId + "/edit"
   mapping.append([e, eId, eUrl])
+  evaluatorCount += 1
+  print('Compare evaluatorCount ' + str(evaluatorCount) + ' to ' + str(maxEvaluators))
+  if evaluatorCount >= maxEvaluators:
+      print('Breaking out for max evaluators')
+      break
 
 # Write out the mapping data associating mapping individual evaluators
 # to their spreadsheets and individual sheets to proposals
