@@ -5,5 +5,7 @@
   "TARGET_FOLDER_ID": "ID of target Google folder to add evaluations & summary",
   "testingFile": null,
   "maxEvaluators": 1000,
-  "maxProposals": 1000
+  "maxProposals": 1000,
+  "OUTPUTS_MASTER_ID": "ID of Master Outputs Spreadsheet",
+  "INPUTS_EVAL_MAPPING_ID": "ID of Spreadsheet containing links to evaluators' spreadsheets and tabs"
 }
