@@ -24,6 +24,7 @@ sheetService = build('sheets', 'v4', credentials=creds)
 driveService = build('drive', 'v3', credentials=creds)
 
 evaluatorCount = 0
+evaluatorMax = 0
 evaluatorIndices = {}
 proposalIndices = {}
 matrixMap = []
@@ -37,6 +38,7 @@ sheetCount = 0
 
 def getEvaluatorIndices():
     global evaluatorCount
+    global evaluatorMax
     global evaluatorIndices
     global matrixMap
     result = sheetService.spreadsheets().values().get(spreadsheetId=INPUTS_SPREADSHEET_ID,range="Evaluators!A1:A100").execute()
@@ -48,6 +50,7 @@ def getEvaluatorIndices():
         mmList.append(tmp[i][0])
     matrixMap.append(mmList)
     evaluatorCount = len(evaluatorList)
+    evaluatorMax = evaluatorCount
 
     for i in range(len(evaluatorList)):
         evaluatorIndices[evaluatorList[i]] = i
@@ -136,11 +139,11 @@ def create_one_sheet(evaluator, proposals):
     proposalCount = 0
     # Now copy over the evaluation sheet for each of the assigned evaluations
     for proposal in proposals:
-        print('   Adding proposal: ', proposal['name'])
         sheetCount += 1
         proposalCount += 1
         if proposalCount > maxProposals:
             break
+        print('   Adding proposal: ', proposal['name'])
         if sheetCount%15 == 0:
             print('Pausing for 45 seconds ... ')
             time.sleep(45)
@@ -163,7 +166,6 @@ def create_one_sheet(evaluator, proposals):
                 data = testingData[proposal['name']]
             elif 'default' in testingData:
                 data = testingData['default']
-            print('Write out test data ' + str(data))
             if data:
                 sheetService.spreadsheets().values().update(spreadsheetId=evaluatorSheetId, 
                 range=proposal['name']+"!C7:C24",
@@ -209,14 +211,13 @@ def createMappingSpreadsheet():
     response = request.execute()
 
     # Now write out the values
-    cnt = evaluatorCount
+    cnt = evaluatorMax
     if cnt > 25: # 25 because the first column is the proposal name
       cnt -= 26
       letter = 'A'+ chr(ord('A') + cnt)
     else:
       letter = chr(ord('A') + cnt)
     rangeValue = "Tab Mapping!A1:"+letter + str(1+len(proposalIndices))
-    print('rangeValue = ', rangeValue)
 
     sheetService.spreadsheets().values().update(
       spreadsheetId=mappingFileId,
@@ -244,19 +245,13 @@ for opt, arg in opts:
     if opt == '-e':
         maxEvaluators = int(arg)
 
-print(maxEvaluators)
-print('Testing = ' + str(testing))
+if testing:
+    print('Testing file = ' + str(testing))
 
 if testing:
     testData = None
-    with open('testing_data.json', 'r') as testFile:
-        testData = json.load(testFile)
-    print(testData)
-    if testing in testData:
-        testing = testData[testing]
-    else:
-        print('Could not find test set ' + testing)
-        testing = None
+    with open(testing, 'r') as testFile:
+        testing = json.load(testFile)
 
 # Read list of evaluators and assign them indices. Then create a
 # dictionary mapping evaluators to the proposals assigned to them
@@ -272,9 +267,7 @@ for e in evaluators.keys():
   eUrl = "https://docs.google.com/spreadsheets/d/" + eId + "/edit"
   mapping.append([e, eId, eUrl])
   evaluatorCount += 1
-  print('Compare evaluatorCount ' + str(evaluatorCount) + ' to ' + str(maxEvaluators))
   if evaluatorCount >= maxEvaluators:
-      print('Breaking out for max evaluators')
       break
 
 # Write out the mapping data associating mapping individual evaluators

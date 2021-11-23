@@ -1,14 +1,12 @@
 {
-  "test": {
-    "default": {
-      "default": [["Medium"], ["Medium"], ["Medium"], ["Medium"], ["Medium"], ["Medium"], ["Medium"], ["Medium"], ["Medium"], ["Medium"], ["Medium"], ["Medium"], ["Medium"], ["Medium"], ["Medium"], ["Medium"], ["Medium"], ["Medium"]]
-    },
-    "Mike Schoeffel": {
-      "default": [["Low"], ["Low"], ["Low"], ["Low"], ["Low"], ["Low"], ["Low"], ["Low"], ["Low"], ["Low"], ["Low"], ["Low"], ["Low"], ["Low"], ["Low"], ["Low"], ["Low"], ["Low"]],
-      "2 Community Resiliency Medic Program": [["High"], ["High"], ["High"], ["High"], ["High"], ["High"], ["High"], ["High"], ["High"], ["High"], ["High"], ["High"], ["High"], ["High"], ["High"], ["High"], ["High"], ["High"]]
-    },
-    "Lauren Brune": {
-      "default": [["Low"], ["Low"], ["Low"], ["Low"], ["Low"], ["Low"], ["Low"], ["Low"], ["Low"], ["Low"], ["Low"], ["Low"], ["Low"], ["Low"], ["Low"], ["Low"], ["Low"], ["Low"]]
-    }
+  "default": {
+    "default": [["Medium"], ["Medium"], ["Medium"], ["Medium"], ["Medium"], ["Medium"], ["Medium"], ["Medium"], ["Medium"], ["Medium"], ["Medium"], ["Medium"], ["Medium"], ["Medium"], ["Medium"], ["Medium"], ["Medium"], ["Medium"]]
+  },
+  "Mike Schoeffel": {
+    "default": [["Low"], ["Low"], ["Low"], ["Low"], ["Low"], ["Low"], ["Low"], ["Low"], ["Low"], ["Low"], ["Low"], ["Low"], ["Low"], ["Low"], ["Low"], ["Low"], ["Low"], ["Low"]],
+    "2 Community Resiliency Medic Program": [["High"], ["High"], ["High"], ["High"], ["High"], ["High"], ["High"], ["High"], ["High"], ["High"], ["High"], ["High"], ["High"], ["High"], ["High"], ["High"], ["High"], ["High"]]
+  },
+  "Lauren Brune": {
+    "default": [["Low"], ["Low"], ["Low"], ["Low"], ["Low"], ["Low"], ["Low"], ["Low"], ["Low"], ["Low"], ["Low"], ["Low"], ["Low"], ["Low"], ["Low"], ["Low"], ["Low"], ["Low"]]
   }
 }
