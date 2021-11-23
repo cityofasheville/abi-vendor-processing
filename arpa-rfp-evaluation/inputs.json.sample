@@ -1,0 +1,9 @@
+{
+  "INPUTS_SPREADSHEET_ID": "<ID of ARPA RFP Inputs Master file>"
+  "INPUTS_README_TAB_ID": "ID of ReadMe tab in inputs spreadsheet",
+  "INPUTS_EVAL_TEMPLATE_TAB_ID": "ID of Evaluation Template tab in inputs spreadsheet",
+  "TARGET_FOLDER_ID": "ID of target Google folder to add evaluations & summary",
+  "testingFile": null,
+  "maxEvaluators": 1000,
+  "maxProposals": 1000
+}
