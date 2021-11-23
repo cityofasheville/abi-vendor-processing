@@ -3,15 +3,14 @@ import json
 import sys
 import time
 import getopt
+from os.path import exists
 from csv import reader
 from google.oauth2 import service_account
-
 
 SERVICE_ACCOUNT_FILE = 'arpa-processing-25528ff0b6f2.json'
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
 
 creds = service_account.Credentials.from_service_account_file( SERVICE_ACCOUNT_FILE, scopes=SCOPES )
-
 
 # IDs of the various spreadsheets, sheets and folders
 INPUTS_SPREADSHEET_ID = '1xrEqDmNd0jBAh_vth5ReC0DaUxFhYfKT0asQw-pF4kI' 
@@ -229,21 +228,21 @@ def createMappingSpreadsheet():
 ##
 ## Main program
 ##
-
-try:
-    opts, args = getopt.getopt(sys.argv[1:], "t:p:e:")
-except:
-    print('Usage Error')
-    print('evaluator-sheet-script.py [-t <testset-name>] [-p <max-proposals>] [-e <max-evaluators>]')
+inputs = None
+if exists('./inputs.json'):
+    with open('inputs.json', 'r') as file:
+        inputs = json.load(file)
+else:
+    print('You must create an inputs.json file')
     sys.exit()
 
-for opt, arg in opts:
-    if opt == '-t':
-        testing = arg
-    if opt == '-p':
-        maxProposals = int(arg)
-    if opt == '-e':
-        maxEvaluators = int(arg)
+INPUTS_SPREADSHEET_ID = inputs["INPUTS_SPREADSHEET_ID"]
+INPUTS_README_TAB_ID = inputs["INPUTS_README_TAB_ID"]
+INPUTS_EVAL_TEMPLATE_TAB_ID = inputs["INPUTS_EVAL_TEMPLATE_TAB_ID"]
+TARGET_FOLDER_ID = inputs["TARGET_FOLDER_ID"]
+testing = inputs["testingFile"]
+maxEvaluators = inputs["maxEvaluators"]
+maxProposals = inputs["maxProposals"]
 
 if testing:
     print('Testing file = ' + str(testing))
