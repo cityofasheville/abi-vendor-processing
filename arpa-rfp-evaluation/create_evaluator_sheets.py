@@ -13,11 +13,11 @@ SCOPES = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapi
 creds = service_account.Credentials.from_service_account_file( SERVICE_ACCOUNT_FILE, scopes=SCOPES )
 
 # IDs of the various spreadsheets, sheets and folders
-INPUTS_SPREADSHEET_ID = '1xrEqDmNd0jBAh_vth5ReC0DaUxFhYfKT0asQw-pF4kI' 
-INPUTS_README_TAB_ID = 1285419200
-INPUTS_EVAL_TEMPLATE_TAB_ID = 1023300661
+INPUTS_SPREADSHEET_ID = None
+INPUTS_README_TAB_ID = None
+INPUTS_EVAL_TEMPLATE_TAB_ID = None
 
-TARGET_FOLDER_ID = '14_2ov-PiOeSAeFPYuxPuOzayMdx7L4yx'
+TARGET_FOLDER_ID = None
 
 sheetService = build('sheets', 'v4', credentials=creds)
 driveService = build('drive', 'v3', credentials=creds)
