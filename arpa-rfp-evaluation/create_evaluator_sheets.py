@@ -7,10 +7,9 @@ from os.path import exists
 from csv import reader
 from google.oauth2 import service_account
 
-SERVICE_ACCOUNT_FILE = 'arpa-processing-202b3d5190f8.json'
+SERVICE_ACCOUNT_FILE = None
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
 
-creds = service_account.Credentials.from_service_account_file( SERVICE_ACCOUNT_FILE, scopes=SCOPES )
 
 # IDs of the various spreadsheets, sheets and folders
 INPUTS_SPREADSHEET_ID = None
@@ -19,8 +18,8 @@ INPUTS_EVAL_TEMPLATE_TAB_ID = None
 
 TARGET_FOLDER_ID = None
 
-sheetService = build('sheets', 'v4', credentials=creds)
-driveService = build('drive', 'v3', credentials=creds)
+sheetService = None
+driveService = None
 
 evaluatorCount = 0
 evaluatorMax = 0
@@ -35,6 +34,12 @@ maxEvaluators = 1000
 
 sheetCount = 0
 #############################
+
+def setUpServices():
+  global sheetService, driveService
+  creds = service_account.Credentials.from_service_account_file( SERVICE_ACCOUNT_FILE, scopes=SCOPES )
+  sheetService = build('sheets', 'v4', credentials=creds)
+  driveService = build('drive', 'v3', credentials=creds)
 
 def getEvaluatorIndices():
     global evaluatorCount
@@ -243,10 +248,12 @@ INPUTS_SPREADSHEET_ID = inputs["INPUTS_SPREADSHEET_ID"]
 INPUTS_README_TAB_ID = inputs["INPUTS_README_TAB_ID"]
 INPUTS_EVAL_TEMPLATE_TAB_ID = inputs["INPUTS_EVAL_TEMPLATE_TAB_ID"]
 TARGET_FOLDER_ID = inputs["TARGET_FOLDER_ID"]
+SERVICE_ACCOUNT_FILE = inputs["SERVICE_ACCOUNT_FILE"]
 testing = inputs["testingFile"]
 maxEvaluators = inputs["maxEvaluators"]
 maxProposals = inputs["maxProposals"]
 
+setUpServices()
 if testing:
     print('Testing file = ' + str(testing))
 
