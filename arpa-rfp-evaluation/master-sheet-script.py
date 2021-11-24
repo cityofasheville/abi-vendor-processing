@@ -3,6 +3,8 @@ import json
 from csv import reader
 from google.oauth2 import service_account
 import pandas as pd
+from os.path import exists
+
 
 
 SERVICE_ACCOUNT_FILE = 'arpa-processing-202b3d5190f8.json'
@@ -13,8 +15,8 @@ creds = service_account.Credentials.from_service_account_file(
 
 
 # The ID and range of a sample spreadsheet.
-WRITE_SPREADSHEET_ID = '1nFyGhmkFGMdq1HzzTIp6aRtTpfIxgWeKN-veUfef_Eg'
-EVALUATOR_LINKS_SPREADSHEET_ID = '1tAJXTaol2iNrT-ieLYyFPeaX5sUZDRoN3tz6IGR3XNc'
+OUTPUTS_MASTER_ID = None
+INPUTS_EVAL_MAPPING_ID = None
 
 service = build('sheets', 'v4', credentials=creds)
 
@@ -27,23 +29,23 @@ sheet = service.spreadsheets()
 # May need to change this
 
 
-def build_list(all_cat_list, EVALUATOR_LINKS_SPREADSHEET_ID):
+def build_list(all_cat_list, INPUTS_EVAL_MAPPING_ID):
     format_list = []
     sheet = service.spreadsheets()
 
 
     # Reads spreadsheet to get list from the spreadsheet
     total_list = []
-    results = sheet.values().get(spreadsheetId=EVALUATOR_LINKS_SPREADSHEET_ID,range='Copy of Sheet1!A2:B').execute()
+    results = sheet.values().get(spreadsheetId=INPUTS_EVAL_MAPPING_ID,range='Sheet Mapping!A2:C').execute()
     link_ss_values = results.get('values', [])
 
     for thing in link_ss_values:
-        item = thing[1]
+        id = thing[1]
 
-        # Gets ids and range of tabs for each sheet
-        item = item.split('/d/')
-        item = item[1].split('/edit')
-        id = item[0]
+        ## Gets ids and range of tabs for each sheet
+        #item = item.split('/d/')
+        #item = item[1].split('/edit')
+        #id = item[0]
 
         sheets = sheet.get(spreadsheetId=id, fields='sheets/properties/title').execute()
         ranges = [sheet['properties']['title'] for sheet in sheets['sheets']]
@@ -55,14 +57,14 @@ def build_list(all_cat_list, EVALUATOR_LINKS_SPREADSHEET_ID):
             values = results.get('values', [])
             # Goes through each row. For each, builds a list of the needed values
             for number in range(6,24):
-                evaluator = values[3][1].split(": ",1)[1] 
+                evaluator = values[0][1].split(": ",1)[1] 
                 q_number = values[number][0]
-                project_name = values[0][1].split(": ",1)[1] 
-                project_number = project_name[1]
-                link = values[2][1]
+                project_name = values[1][1].split(": ",1)[1] 
+                project_number = project_name[0]
+                link = thing[2]
                 question_cat = values[number][4]
                 response = values[number][2]
-                short_list = [evaluator, project_number, link, q_number, question_cat, response]
+                short_list = [evaluator, project_number, project_name, link, q_number, question_cat, response]
                 
                 # Adds "no" responses for the categories
                 for number in range(0,10):
@@ -88,13 +90,27 @@ def build_list(all_cat_list, EVALUATOR_LINKS_SPREADSHEET_ID):
                 format_list.append(short_list)
     return(format_list)
 
+############################ Main Program Start
+
+inputs = None
+if exists('./inputs.json'):
+    with open('inputs.json', 'r') as file:
+        inputs = json.load(file)
+else:
+    print('You must create an inputs.json file')
+    sys.exit()
+
+
+OUTPUTS_MASTER_ID = inputs["OUTPUTS_MASTER_ID"]
+INPUTS_EVAL_MAPPING_ID = inputs["INPUTS_EVAL_MAPPING_ID"]
+
 
 # This bit of code gets the list of categories from the master sheet, which is passed
 # into the function
-results = sheet.values().get(spreadsheetId=WRITE_SPREADSHEET_ID,range='All Data Test!A1:R1').execute()
+results = sheet.values().get(spreadsheetId=OUTPUTS_MASTER_ID,range='All Data!A1:R1').execute()
 values = results.get('values', [])
 
-all_cat_list = values[0][6:16] #This range gets a list of categories from the spreadsheet
+all_cat_list = values[0][7:17] #This range gets a list of categories from the spreadsheet
 all_cat_list_fixed = []
 
 for item in all_cat_list:
@@ -105,7 +121,7 @@ all_cat_list = all_cat_list_fixed
 
 
 # Calls list building function, creates the list to append to the spreadsheet
-list_to_append = build_list(all_cat_list, EVALUATOR_LINKS_SPREADSHEET_ID)
+list_to_append = build_list(all_cat_list, INPUTS_EVAL_MAPPING_ID)
 
 
 # Update sheet
@@ -115,8 +131,8 @@ resource = {
 }
 
 service.spreadsheets().values().update(
-  spreadsheetId=WRITE_SPREADSHEET_ID,
-  range="All Data Test!A2:AA1000",
+  spreadsheetId=OUTPUTS_MASTER_ID,
+  range="All Data!A2:AA1000",
   body=resource,
   valueInputOption="USER_ENTERED").execute()
 
