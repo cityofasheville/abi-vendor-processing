@@ -8,23 +8,19 @@ from os.path import exists
 
 
 
-SERVICE_ACCOUNT_FILE = 'arpa-processing-202b3d5190f8.json'
+SERVICE_ACCOUNT_FILE = None
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
 
-creds = service_account.Credentials.from_service_account_file(
-        SERVICE_ACCOUNT_FILE, scopes=SCOPES)
 
 
 INPUTS_EVAL_MAPPING_ID =None
 OUTPUTS_MASTER_ID = None
 INPUTS_SPREADSHEET_ID = None
 
-
-service = build('sheets', 'v4', credentials=creds)
-drive_service = build('drive', 'v3', credentials=creds)
+sheetService = None
+#driveService = None
 
 # Call the Sheets API
-sheet = service.spreadsheets()
 
 #########################################################
 
@@ -34,10 +30,16 @@ sheet = service.spreadsheets()
 # A list with that info is passed to the third function, which creates the summary list using
 # all of the evaluator's scores for each project.
 
+def setUpServices():
+  global sheetService
+  creds = service_account.Credentials.from_service_account_file( SERVICE_ACCOUNT_FILE, scopes=SCOPES )
+  sheetService = build('sheets', 'v4', credentials=creds)
+  #driveService = build('drive', 'v3', credentials=creds)
+
 def grab_weights_and_links(INPUTS_SPREADSHEET_ID):
     # Gets score weights from the evaluation sheet, and project links, and puts these things into 2
     # dfs to merge with the main summary df later
-    sheet = service.spreadsheets()
+    sheet = sheetService.spreadsheets()
     results = sheet.values().get(spreadsheetId=INPUTS_SPREADSHEET_ID,range='Score Weighting!C8:D27').execute()
     values = results.get('values', [])
     del values[13]
@@ -48,7 +50,7 @@ def grab_weights_and_links(INPUTS_SPREADSHEET_ID):
     weight_df['global_weight'] = weight_df['global_weight'].astype(float)
 
     # Gets project links from the evaluation assignment sheet
-    sheet = service.spreadsheets()
+    sheet = sheetService.spreadsheets()
     results = sheet.values().get(spreadsheetId=INPUTS_SPREADSHEET_ID,range='Eligible Proposals and Assignments!A2:C').execute()
     values = results.get('values', [])
     links_df = pd.DataFrame(values, columns=['project_number', 'project_name', 'project_link'])
@@ -61,7 +63,8 @@ def grab_weights_and_links(INPUTS_SPREADSHEET_ID):
 
 def build_project_summary_list(links_df, weight_df, INPUTS_EVAL_MAPPING_ID):
     # Creating a dataframe with links to individual tabs to use later
-    sheet = service.spreadsheets()
+    ## Should this be it's own function? Probably
+    sheet = sheetService.spreadsheets()
     results = sheet.values().get(spreadsheetId=INPUTS_EVAL_MAPPING_ID,range='Tab Mapping!A1:AB').execute()
     tabs = results.get('values', [])
     tab_links_df = pd.DataFrame(tabs)
@@ -80,7 +83,7 @@ def build_project_summary_list(links_df, weight_df, INPUTS_EVAL_MAPPING_ID):
     for thing in link_ss_values:
         id = thing[1]
 
-        sheet = service.spreadsheets()
+        sheet = sheetService.spreadsheets()
         sheets = sheet.get(spreadsheetId=id, fields='sheets/properties/title').execute()
         ranges = [sheet['properties']['title'] for sheet in sheets['sheets']]
         
@@ -191,6 +194,7 @@ def summarize_all_project(my_list, links_df):
 
 ###########################################################################
 
+
 inputs = None
 if exists('./inputs.json'):
     with open('inputs.json', 'r') as file:
@@ -203,6 +207,11 @@ else:
 INPUTS_EVAL_MAPPING_ID = inputs["INPUTS_EVAL_MAPPING_ID"]
 OUTPUTS_MASTER_ID = inputs["OUTPUTS_MASTER_ID"]
 INPUTS_SPREADSHEET_ID = inputs['INPUTS_SPREADSHEET_ID']
+SERVICE_ACCOUNT_FILE = inputs['SERVICE_ACCOUNT_FILE']
+
+
+setUpServices()
+sheet = sheetService.spreadsheets()
 
 links_df, weight_df = grab_weights_and_links(INPUTS_SPREADSHEET_ID)
 
@@ -218,7 +227,7 @@ resource = {
   "values": list_to_append
 }
 
-service.spreadsheets().values().update(
+sheetService.spreadsheets().values().update(
   spreadsheetId=OUTPUTS_MASTER_ID,
   range="Summary!A2:AA1000",
   body=resource,
