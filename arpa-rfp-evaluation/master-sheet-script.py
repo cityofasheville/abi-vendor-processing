@@ -52,13 +52,14 @@ def build_list(allCategories, INPUTS_EVAL_MAPPING_ID):
         link = evaluatorEntry[2]
         tabs = getSheetTitles(sheet, id)
 
-        for tab in tabs[1:]:
+        for tab in tabs[1:]: # Each tab is one evaluation
             print(' Working on tab ' + tab)
             # ? Why R24, not E24 ?
             values = sheet.values().get(spreadsheetId=id,range=tab +'!A1:R24').execute().get('values', [])
             projectName = values[1][1].split(": ",1)[1] 
             projectNumber = projectName.split(' ')[0]
-            #Generates list of categories for the specific project
+
+            #Generates the list of categories for the specific project
             projectCategories = stripLower(values[2][1].split(": ")[1].split(', '))
 
             # Set up category flags for this project
@@ -66,8 +67,8 @@ def build_list(allCategories, INPUTS_EVAL_MAPPING_ID):
             for category in allCategories:
                 if category in projectCategories:
                     categoryFlags[allCategories.index(category)] = 'yes'
+
             countResponses = 0
-            # Need to delay appending to allQuestions until we know # responses 
             holdQuestions = []
             # Goes through each row. For each, builds a list of the needed values
             for row in range(6,24):
@@ -79,11 +80,11 @@ def build_list(allCategories, INPUTS_EVAL_MAPPING_ID):
                 short_list = [evaluator, projectNumber, projectName, link, qNumber, qCategory, response, 'no']
                 short_list.extend(categoryFlags)
                 holdQuestions.append(short_list)
+
             for row in holdQuestions:
-                if (countResponses == 18):
-                    row[7] = 'yes'
+                row[7] = 'yes' if countResponses == 18 else 'no'
                 allQuestions.append(row)
-            time.sleep(1)
+            time.sleep(1) # To deal with Google API quotas
 
 
         break
