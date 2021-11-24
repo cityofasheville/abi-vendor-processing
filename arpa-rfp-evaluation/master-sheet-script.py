@@ -23,9 +23,7 @@ sheetService = None
 
 #########################################################
 
-# Script assumes project number is in the project name in each evaluator sheet.
 
-# May need to change this
 def setUpServices():
   global sheetService
   creds = service_account.Credentials.from_service_account_file( SERVICE_ACCOUNT_FILE, scopes=SCOPES )
