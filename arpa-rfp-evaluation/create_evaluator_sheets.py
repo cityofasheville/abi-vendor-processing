@@ -149,7 +149,7 @@ def create_one_sheet(evaluator, proposals):
         if proposalCount > maxProposals:
             break
         print('   Adding proposal: ', proposal['name'])
-        if sheetCount%15 == 0:
+        if sheetCount%10 == 0:
             print('Pausing for 45 seconds ... ')
             time.sleep(45)
 
