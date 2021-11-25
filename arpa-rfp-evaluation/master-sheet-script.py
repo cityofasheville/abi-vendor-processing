@@ -35,6 +35,8 @@ def getSheetTitles(sheet, spreadsheetId):
     sheets = sheet.get(spreadsheetId=spreadsheetId, fields='sheets/properties/title').execute()
     return [sheet['properties']['title'] for sheet in sheets['sheets']]
 
+evaluationStatus = []
+
 def build_list(allCategories, INPUTS_EVAL_MAPPING_ID):
     allQuestions = []
     sheet = sheetService.spreadsheets()
@@ -64,9 +66,11 @@ def build_list(allCategories, INPUTS_EVAL_MAPPING_ID):
 
             # Set up category flags for this project
             categoryFlags = ['no'] * len(allCategories)
-            for category in allCategories:
-                if category in projectCategories:
+            for category in projectCategories:
+                if category in allCategories:
                     categoryFlags[allCategories.index(category)] = 'yes'
+                else:
+                    print('Warning, unknown category: ' + category)
 
             countResponses = 0
             holdQuestions = []
@@ -84,10 +88,17 @@ def build_list(allCategories, INPUTS_EVAL_MAPPING_ID):
             for row in holdQuestions:
                 row[7] = 'yes' if countResponses == 18 else 'no'
                 allQuestions.append(row)
+#Evaluator, proposal name, proposal link, number of question answered, Also a category for complete, not started, partially complete
+            status = None
+            if countResponses == 18:
+                status = 'Complete'
+            elif countResponses == 0:
+                status = 'Not started'
+            else:
+                status = 'Partial'
+            evaluationStatus.append([evaluator, projectName, countResponses, status, link])
             time.sleep(1) # To deal with Google API quotas
 
-
-        break
 
     return allQuestions
 
@@ -130,6 +141,18 @@ resource = {
 sheetService.spreadsheets().values().update(
   spreadsheetId=OUTPUTS_MASTER_ID,
   range="All Data!A2:AA10000",
+  body=resource,
+  valueInputOption="USER_ENTERED").execute()
+
+# Update sheet
+resource = {
+  "majorDimension": "ROWS",
+  "values": evaluationStatus
+}
+
+sheetService.spreadsheets().values().update(
+  spreadsheetId=OUTPUTS_MASTER_ID,
+  range="Evaluation Status!A2:AA10000",
   body=resource,
   valueInputOption="USER_ENTERED").execute()
 
