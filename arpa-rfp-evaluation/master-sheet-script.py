@@ -18,39 +18,32 @@ creds = service_account.Credentials.from_service_account_file(
 OUTPUTS_MASTER_ID = None
 INPUTS_EVAL_MAPPING_ID = None
 
-service = build('sheets', 'v4', credentials=creds)
+sheetService = None
 
-# Call the Sheets API
-sheet = service.spreadsheets()
 
 #########################################################
 
-# Script assumes project number is in the project name in each evaluator sheet.
-# May need to change this
+
+def setUpServices():
+  global sheetService
+  creds = service_account.Credentials.from_service_account_file( SERVICE_ACCOUNT_FILE, scopes=SCOPES )
+  sheetService = build('sheets', 'v4', credentials=creds)
+  #driveService = build('drive', 'v3', credentials=creds)
 
 
 def build_list(all_cat_list, INPUTS_EVAL_MAPPING_ID):
     format_list = []
-    sheet = service.spreadsheets()
-
+    sheet = sheetService.spreadsheets()
 
     # Reads spreadsheet to get list from the spreadsheet
     total_list = []
     results = sheet.values().get(spreadsheetId=INPUTS_EVAL_MAPPING_ID,range='Sheet Mapping!A2:C').execute()
     link_ss_values = results.get('values', [])
 
-    for thing in link_ss_values:
-        id = thing[1]
-
-        ## Gets ids and range of tabs for each sheet
-        #item = item.split('/d/')
-        #item = item[1].split('/edit')
-        #id = item[0]
-
+    for entry in link_ss_values:
+        id = entry[1]
         sheets = sheet.get(spreadsheetId=id, fields='sheets/properties/title').execute()
         ranges = [sheet['properties']['title'] for sheet in sheets['sheets']]
-        
-       
         
         for tab in ranges[1:]:
             results = sheet.values().get(spreadsheetId=id,range=tab +'!A1:R24').execute()
@@ -61,7 +54,7 @@ def build_list(all_cat_list, INPUTS_EVAL_MAPPING_ID):
                 q_number = values[number][0]
                 project_name = values[1][1].split(": ",1)[1] 
                 project_number = project_name[0]
-                link = thing[2]
+                link = entry[2]
                 question_cat = values[number][4]
                 response = values[number][2]
                 short_list = [evaluator, project_number, project_name, link, q_number, question_cat, response]
@@ -90,8 +83,24 @@ def build_list(all_cat_list, INPUTS_EVAL_MAPPING_ID):
                 format_list.append(short_list)
     return(format_list)
 
+
+def create_category_list(OUTPUTS_MASTER_ID):
+  results = sheet.values().get(spreadsheetId=OUTPUTS_MASTER_ID,range='All Data!A1:R1').execute()
+  values = results.get('values', [])
+
+  all_cat_list = values[0][7:17] #This range gets a list of categories from the spreadsheet
+  all_cat_list_fixed = []
+
+  for item in all_cat_list:
+    j = item.strip().lower()
+    all_cat_list_fixed.append(j)
+
+  all_cat_list = all_cat_list_fixed
+  return(all_cat_list)
+
 ############################ Main Program Start
 
+#Open Json
 inputs = None
 if exists('./inputs.json'):
     with open('inputs.json', 'r') as file:
@@ -100,25 +109,17 @@ else:
     print('You must create an inputs.json file')
     sys.exit()
 
-
+# Set const values
 OUTPUTS_MASTER_ID = inputs["OUTPUTS_MASTER_ID"]
 INPUTS_EVAL_MAPPING_ID = inputs["INPUTS_EVAL_MAPPING_ID"]
 
+setUpServices()
+sheet = sheetService.spreadsheets()
 
-# This bit of code gets the list of categories from the master sheet, which is passed
+# Gets the list of categories from the master sheet, which is passed
 # into the function
-results = sheet.values().get(spreadsheetId=OUTPUTS_MASTER_ID,range='All Data!A1:R1').execute()
-values = results.get('values', [])
 
-all_cat_list = values[0][7:17] #This range gets a list of categories from the spreadsheet
-all_cat_list_fixed = []
-
-for item in all_cat_list:
-  j = item.strip().lower()
-  all_cat_list_fixed.append(j)
-
-all_cat_list = all_cat_list_fixed
-
+all_cat_list = create_category_list(OUTPUTS_MASTER_ID)
 
 # Calls list building function, creates the list to append to the spreadsheet
 list_to_append = build_list(all_cat_list, INPUTS_EVAL_MAPPING_ID)
@@ -130,7 +131,7 @@ resource = {
   "values": list_to_append
 }
 
-service.spreadsheets().values().update(
+sheetService.spreadsheets().values().update(
   spreadsheetId=OUTPUTS_MASTER_ID,
   range="All Data!A2:AA1000",
   body=resource,
