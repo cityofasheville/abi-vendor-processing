@@ -32,8 +32,8 @@ def stripLower(lst):
     return list(map(lambda itm: itm.strip().lower() if itm else None, lst))
 
 def getSheetTitles(sheet, spreadsheetId):
-    sheets = sheet.get(spreadsheetId=spreadsheetId, fields='sheets/properties/title').execute()
-    return [sheet['properties']['title'] for sheet in sheets['sheets']]
+    sheets = sheet.get(spreadsheetId=spreadsheetId, fields='sheets/properties').execute()
+    return [{"title": sheet['properties']['title'], "id": sheet['properties']['sheetId']} for sheet in sheets['sheets']]
 
 evaluationStatus = []
 
@@ -53,11 +53,11 @@ def build_list(allCategories, INPUTS_EVAL_MAPPING_ID):
         id = evaluatorEntry[1] # ID of this evaluator's spreadsheet
         link = evaluatorEntry[2]
         tabs = getSheetTitles(sheet, id)
-
         for tab in tabs[1:]: # Each tab is one evaluation
-            print(' Working on tab ' + tab)
+            print(' Working on tab ' + tab['title'] + ' (' + str(tab['id']) + ')')
+            tabLink = link + '#gid=' + str(tab['id'])
             # ? Why R24, not E24 ?
-            values = sheet.values().get(spreadsheetId=id,range=tab +'!A1:R24').execute().get('values', [])
+            values = sheet.values().get(spreadsheetId=id,range=tab['title'] +'!A1:R24').execute().get('values', [])
             projectName = values[1][1].split(": ",1)[1] 
             projectNumber = projectName.split(' ')[0]
 
@@ -96,7 +96,7 @@ def build_list(allCategories, INPUTS_EVAL_MAPPING_ID):
                 status = 'Not started'
             else:
                 status = 'Partial'
-            evaluationStatus.append([evaluator, projectName, countResponses, status, link])
+            evaluationStatus.append([evaluator, projectName, countResponses, status, tabLink])
             time.sleep(1) # To deal with Google API quotas
 
 
