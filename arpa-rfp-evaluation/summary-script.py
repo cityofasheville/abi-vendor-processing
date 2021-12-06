@@ -39,11 +39,11 @@ def setUpServices():
   sheetService = build('sheets', 'v4', credentials=creds)
   #driveService = build('drive', 'v3', credentials=creds)
 
-def grab_weights_and_links(INPUTS_SPREADSHEET_ID):
+def grab_weights_and_links(inputSpreadsheetId):
     # Gets score weights from the evaluation sheet, and project links, and puts these things into 2
     # dfs to merge with the main summary df later
     sheet = sheetService.spreadsheets()
-    results = sheet.values().get(spreadsheetId=INPUTS_SPREADSHEET_ID,range='Score Weighting!C8:D27').execute()
+    results = sheet.values().get(spreadsheetId=inputSpreadsheetId,range='Score Weighting!C8:D27').execute()
     values = results.get('values', [])
     del values[13]
     del values[6]
@@ -54,16 +54,16 @@ def grab_weights_and_links(INPUTS_SPREADSHEET_ID):
 
     # Gets project links from the evaluation assignment sheet
     sheet = sheetService.spreadsheets()
-    results = sheet.values().get(spreadsheetId=INPUTS_SPREADSHEET_ID,range='Eligible Proposals and Assignments!A2:C').execute()
+    results = sheet.values().get(spreadsheetId=inputSpreadsheetId,range='Eligible Proposals and Assignments!A2:C').execute()
     values = results.get('values', [])
     links_df = pd.DataFrame(values, columns=['project_number', 'project_name', 'project_link'])
 
 
     return(links_df, weight_df)
 
-def list_tab_links(INPUTS_EVAL_MAPPING_ID):
+def list_tab_links(evaluationMappingSheetId):
     sheet = sheetService.spreadsheets()
-    results = sheet.values().get(spreadsheetId=INPUTS_EVAL_MAPPING_ID,range='Tab Mapping!A1:AB').execute()
+    results = sheet.values().get(spreadsheetId=evaluationMappingSheetId,range='Tab Mapping!A1:AB').execute()
     tabs = results.get('values', [])
     tab_links_df = pd.DataFrame(tabs)
     tab_links_df.iloc[0,0] = 'Project'
@@ -73,20 +73,20 @@ def list_tab_links(INPUTS_EVAL_MAPPING_ID):
     return(tab_links_df)
 
 
-def build_project_summary_list(links_df, weight_df, INPUTS_EVAL_MAPPING_ID):
+def build_project_summary_list(links_df, weight_df, evaluationMappingSheetId):
 
-    tab_links_df = list_tab_links(INPUTS_EVAL_MAPPING_ID)
+    tab_links_df = list_tab_links(evaluationMappingSheetId)
 
 
     # Get spreadsheet links/ids from the spreadsheet
     total_list = []
     sheet = sheetService.spreadsheets()
-    results = sheet.values().get(spreadsheetId=INPUTS_EVAL_MAPPING_ID,range='Sheet Mapping!A2:C').execute()
+    results = sheet.values().get(spreadsheetId=evaluationMappingSheetId,range='Sheet Mapping!A2:C').execute()
     link_ss_values = results.get('values', [])
 
     for thing in link_ss_values:
         id = thing[1]
-
+        print('   Sheet ' + id)
         sheet = sheetService.spreadsheets()
         sheets = sheet.get(spreadsheetId=id, fields='sheets/properties/title').execute()
         ranges = [sheet['properties']['title'] for sheet in sheets['sheets']]
@@ -95,6 +95,7 @@ def build_project_summary_list(links_df, weight_df, INPUTS_EVAL_MAPPING_ID):
 
         # Goes through each tab and gets values
         for tab in ranges[1:]:
+            print ('       Tab ' + tab)
             results = sheet.values().get(spreadsheetId=id,range=tab +'!A1:E24').execute()
             values = results.get('values', [])
             data = values[6:]
@@ -285,15 +286,18 @@ OUTPUTS_MASTER_ID = inputs["OUTPUTS_MASTER_ID"]
 INPUTS_SPREADSHEET_ID = inputs['INPUTS_SPREADSHEET_ID']
 SERVICE_ACCOUNT_FILE = inputs['SERVICE_ACCOUNT_FILE']
 
-
+print('Set up services')
 setUpServices()
 sheet = sheetService.spreadsheets()
 
+print('Load weights')
 links_df, weight_df = grab_weights_and_links(INPUTS_SPREADSHEET_ID)
 
 
 # Calls list building function
+print('Build project summary list')
 all_project_scores = build_project_summary_list(links_df, weight_df, INPUTS_EVAL_MAPPING_ID)
+print('Summarize all the projects')
 list_to_append, maxMinList = summarize_all_project(all_project_scores, links_df)
 
 
