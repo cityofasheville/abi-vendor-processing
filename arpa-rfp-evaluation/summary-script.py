@@ -5,6 +5,9 @@ from csv import reader
 from google.oauth2 import service_account
 import pandas as pd
 from os.path import exists
+import numpy as np
+from functools import reduce
+
 
 
 
@@ -58,12 +61,7 @@ def grab_weights_and_links(INPUTS_SPREADSHEET_ID):
 
     return(links_df, weight_df)
 
-
-
-
-def build_project_summary_list(links_df, weight_df, INPUTS_EVAL_MAPPING_ID):
-    # Creating a dataframe with links to individual tabs to use later
-    ## Should this be it's own function? Probably
+def list_tab_links(INPUTS_EVAL_MAPPING_ID):
     sheet = sheetService.spreadsheets()
     results = sheet.values().get(spreadsheetId=INPUTS_EVAL_MAPPING_ID,range='Tab Mapping!A1:AB').execute()
     tabs = results.get('values', [])
@@ -72,11 +70,17 @@ def build_project_summary_list(links_df, weight_df, INPUTS_EVAL_MAPPING_ID):
     tab_links_df.columns = tab_links_df.iloc[0]
     tab_links_df.drop(tab_links_df.index[0], inplace=True)
     tab_links_df.reset_index(inplace=True)
+    return(tab_links_df)
 
+
+def build_project_summary_list(links_df, weight_df, INPUTS_EVAL_MAPPING_ID):
+
+    tab_links_df = list_tab_links(INPUTS_EVAL_MAPPING_ID)
 
 
     # Get spreadsheet links/ids from the spreadsheet
     total_list = []
+    sheet = sheetService.spreadsheets()
     results = sheet.values().get(spreadsheetId=INPUTS_EVAL_MAPPING_ID,range='Sheet Mapping!A2:C').execute()
     link_ss_values = results.get('values', [])
 
@@ -95,31 +99,44 @@ def build_project_summary_list(links_df, weight_df, INPUTS_EVAL_MAPPING_ID):
             values = results.get('values', [])
             data = values[6:]
 
+            # two paths, if else
+            #if df contains no nulls, calculate stats
+            #if df contains nulls, skip that step and add "Not Complete"
+
+
             #Make a dataframe, then change the rating values to numbers
             df = pd.DataFrame(data, columns = ["question_num", 'question', 'rating', 'guidance', 'scoring_category'])
-            df["rating"] = df["rating"].str.lower()
-            df["rating"].replace({"none": 0, "low": 1/3, "medium": 2/3, 'high':1}, inplace=True)
+            df = df.replace(r'^\s*$', np.nan, regex=True)
+            if df['rating'].isnull().values.any():
+                ECI_score = "Not Complete"
+                PPE_score = "Not Complete"
+                OQ_score = "Not Complete"
+                total_score = "Not Complete"
+            else:    
+                #df["rating"] = df[~df["rating"].isnull()].str.lower()
+                df["rating"] = df["rating"].str.lower()
+                df["rating"].replace({"none": 0, "low": 1/3, "medium": 2/3, 'high':1}, inplace=True)
+                #add more columns
+                df['total_category_weight'] = df['scoring_category']
+                df["total_category_weight"].replace({"Equitable Community Impact": 40, "Project Plan and Evaluation": 40, "Organizational Qualification": 20}, inplace=True)
 
-            #add more columns
-            df['total_category_weight'] = df['scoring_category']
-            df["total_category_weight"].replace({"Equitable Community Impact": 40, "Project Plan and Evaluation": 40, "Organizational Qualification": 20}, inplace=True)
+                # Adding df of scoring weights to the df I just created
+                df = pd.concat([df, weight_df], axis=1)
 
-            # Adding df of scoring weights to the df I just created
-            df = pd.concat([df, weight_df], axis=1)
-            df['category_rating'] = df['rating'].astype(float) * df['weight_in_cat'].astype(float)
+                df['category_rating'] = df['rating'].astype(float) * df['weight_in_cat'].astype(float)
+                
+                #Calc category value by global weight
+                cat_weights_global = df.groupby(['scoring_category']).category_rating.sum()
+
+                #Formatting output
+                # What are the 11, 8, and 9? They're the total of the "weight within category".
+                # That makes more sense if you take a look at the scoring sheet- 
+                # "Evaluation Score" Score Weighting tab, column 
             
-            #Calc category value by global weight
-            cat_weights_global = df.groupby(['scoring_category']).category_rating.sum()
-
-            #Formatting output
-            # What are the 11, 8, and 9? They're the total of the "weight within category".
-            # That makes more sense if you take a look at the scoring sheet- 
-            # "Evaluation Score" Score Weighting tab, column C
-        
-            ECI_score = (cat_weights_global['Equitable Community Impact']/11) * 40
-            PPE_score = (cat_weights_global['Project Plan and Evaluation']/8) * 40
-            OQ_score = (cat_weights_global['Organizational Qualification']/9) * 20
-            total_score = ECI_score + PPE_score + OQ_score 
+                ECI_score = (cat_weights_global['Equitable Community Impact']/11) * 40
+                PPE_score = (cat_weights_global['Project Plan and Evaluation']/8) * 40
+                OQ_score = (cat_weights_global['Organizational Qualification']/9) * 20
+                total_score = ECI_score + PPE_score + OQ_score 
 
             #Grabbing info from list to put into the right output format
             project_name = values[1][1].split(": ",1)[1]
@@ -138,6 +155,44 @@ def build_project_summary_list(links_df, weight_df, INPUTS_EVAL_MAPPING_ID):
     return(total_list)
 
 
+def maxMinDifference(df):
+    #columnList = ['total_score', 'ECI_score', 'PPE_score', 'OQ_score']
+    #for entry in columnList:
+    df.merge(links_df['project_number'], on='project_number', how='left')
+
+    maxMinDF = pd.DataFrame(df.groupby(['project_number', 'project_name'])['total_score'].agg(['max','min']))
+    maxMinDF['totalScoreVaries'] = maxMinDF['max'] - maxMinDF['min']
+    
+    ECIMaxMinDF = pd.DataFrame(df.groupby(['project_number', 'project_name'])['ECI_score'].agg(['max','min']))
+    ECIMaxMinDF['ECIScoreVaries'] = maxMinDF['max'] - maxMinDF['min']
+
+    PPEMaxMinDF = pd.DataFrame(df.groupby(['project_number', 'project_name'])['PPE_score'].agg(['max','min']))
+    PPEMaxMinDF['PPEScoreVaries'] = maxMinDF['max'] - maxMinDF['min']
+
+    OQMaxMinDF = pd.DataFrame(df.groupby(['project_number', 'project_name'])['OQ_score'].agg(['max','min']))
+    OQMaxMinDF['OQScoreVaries'] = maxMinDF['max'] - maxMinDF['min']
+
+    maxMinDF = maxMinDF.merge(ECIMaxMinDF['ECIScoreVaries'], on=['project_number', 'project_name'])
+    maxMinDF = maxMinDF.merge(PPEMaxMinDF['PPEScoreVaries'], on=['project_number', 'project_name'])
+    maxMinDF = maxMinDF.merge(OQMaxMinDF['OQScoreVaries'], on=['project_number', 'project_name'])
+    maxMinDF.drop(['max', 'min'], axis=1, inplace=True)
+    columnList = ['totalScoreVaries', 'ECIScoreVaries', 'PPEScoreVaries', 'OQScoreVaries']
+    for entry in columnList:
+        maxMinDF[maxMinDF[entry] >= 50] = True
+        maxMinDF[maxMinDF[entry] !=True] = np.nan
+    maxMinDF = maxMinDF.dropna( how='all', subset=['totalScoreVaries', 'ECIScoreVaries', 'PPEScoreVaries', 'OQScoreVaries'])
+    maxMinDF = maxMinDF.replace(np.nan, '')
+    maxMinDF = maxMinDF.reset_index()
+
+    #print(maxMinDF)
+    maxMinList = maxMinDF.values.tolist()
+    print(maxMinList)
+    return(maxMinList)
+
+
+
+
+
 
 def summarize_all_project(my_list, links_df):
     # Creating initial df
@@ -148,10 +203,19 @@ def summarize_all_project(my_list, links_df):
 
     #Calculating mean and median, renaming columsn and resetting index (so that project #s show up when converted to list)
     #summary_df = pd.DataFrame(my_df.groupby(['project_number', 'project_name', 'link_to_proposal'])['total_score', 'ECI_score', 'PPE_score', 'OQ_score'].mean())
-    summary_df = pd.DataFrame(my_df.groupby(['project_number', 'project_name'])['total_score', 'ECI_score', 'PPE_score', 'OQ_score'].mean())
+    numericScoreDF = my_df[pd.to_numeric(my_df['total_score'], errors='coerce').notnull()]
+    numericScoreDF['total_score'] = numericScoreDF['total_score'].astype(float)
+    numericScoreDF['ECI_score'] = numericScoreDF['ECI_score'].astype(float)
+    numericScoreDF['PPE_score'] = numericScoreDF['PPE_score'].astype(float)
+    numericScoreDF['OQ_score'] = numericScoreDF['OQ_score'].astype(float)
+    
+    
+    maxMinList = maxMinDifference(numericScoreDF)
+
+    summary_df = pd.DataFrame(numericScoreDF.groupby(['project_number', 'project_name'])['total_score', 'ECI_score', 'PPE_score', 'OQ_score'].mean())
     summary_df = summary_df.reset_index()
 
-    median_df = pd.DataFrame(my_df.groupby(['project_name'])['total_score'].median())
+    median_df = pd.DataFrame(numericScoreDF.groupby(['project_name'])['total_score'].median())
     median_df = median_df.rename({'total_score':'median_score'}, axis=1)
 
     # Creating string of all scores per project
@@ -178,6 +242,8 @@ def summarize_all_project(my_list, links_df):
     #summary_df = summary_df.drop('link_to_proposal', 1)
     summary_df = summary_df.round(2)
 
+
+
     final_list = summary_df.values.tolist()
 
     # evals is string of the links to evaluation tabs
@@ -188,9 +254,19 @@ def summarize_all_project(my_list, links_df):
         evals = list(evals.split(', '))
         entry.extend(evals)
         
-    return(final_list)
+    return(final_list, maxMinList)
 
+def updateSheet(my_list, spreadSheetID, range):
+    resource = {
+    "majorDimension": "ROWS",
+    "values": my_list
+}
 
+    sheetService.spreadsheets().values().update(
+    spreadsheetId=spreadSheetID,
+    range=range,
+    body=resource,
+    valueInputOption="USER_ENTERED").execute()
 
 ###########################################################################
 
@@ -218,20 +294,25 @@ links_df, weight_df = grab_weights_and_links(INPUTS_SPREADSHEET_ID)
 
 # Calls list building function
 all_project_scores = build_project_summary_list(links_df, weight_df, INPUTS_EVAL_MAPPING_ID)
-list_to_append = summarize_all_project(all_project_scores, links_df)
+list_to_append, maxMinList = summarize_all_project(all_project_scores, links_df)
 
+
+
+
+updateSheet(list_to_append, OUTPUTS_MASTER_ID, "Summary!A2:AA1000")
+updateSheet(maxMinList, OUTPUTS_MASTER_ID, "Potential Issues!A2:AA1000")
 
 #Update Spreadsheet
-resource = {
-  "majorDimension": "ROWS",
-  "values": list_to_append
-}
+#resource = {
+#  "majorDimension": "ROWS",
+#  "values": list_to_append
+#}
 
-sheetService.spreadsheets().values().update(
-  spreadsheetId=OUTPUTS_MASTER_ID,
-  range="Summary!A2:AA1000",
-  body=resource,
-  valueInputOption="USER_ENTERED").execute()
+#sheetService.spreadsheets().values().update(
+#  spreadsheetId=OUTPUTS_MASTER_ID,
+#  range="Summary!A2:AA1000",
+#  body=resource,
+#  valueInputOption="USER_ENTERED").execute()
 
 print('Finished, Party time')
 

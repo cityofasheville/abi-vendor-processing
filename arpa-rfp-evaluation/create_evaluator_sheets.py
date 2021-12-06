@@ -28,7 +28,7 @@ proposalIndices = {}
 evaluatorSheetMapping = [["Name", "Sheet ID", "Sheet Link"]]
 matrixMap = []
 
-testing = None
+testing = True
 maxProposals = 1000
 maxEvaluators = 1000
 
@@ -123,7 +123,7 @@ def create_one_sheet(evaluator, proposals):
     print('Creating a spreadsheet for ', evaluator)
     # Create the spreadsheet with the name of the evaluator
     evaluatorSheetId = createSpreadsheet(evaluator, TARGET_FOLDER_ID)
-    testingData = None
+    testingData = "sample_test_data.json"
     if testing:
         if evaluator in testing:
             testingData = testing[evaluator]
