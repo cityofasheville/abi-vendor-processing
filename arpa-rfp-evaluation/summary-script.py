@@ -7,7 +7,7 @@ import pandas as pd
 from os.path import exists
 import numpy as np
 from functools import reduce
-
+import time
 
 
 
@@ -77,7 +77,6 @@ def build_project_summary_list(links_df, weight_df, evaluationMappingSheetId):
 
     tab_links_df = list_tab_links(evaluationMappingSheetId)
 
-
     # Get spreadsheet links/ids from the spreadsheet
     total_list = []
     sheet = sheetService.spreadsheets()
@@ -86,7 +85,7 @@ def build_project_summary_list(links_df, weight_df, evaluationMappingSheetId):
 
     for thing in link_ss_values:
         id = thing[1]
-        print('   Sheet ' + id)
+        print('   Sheet ' + thing[0])
         sheet = sheetService.spreadsheets()
         sheets = sheet.get(spreadsheetId=id, fields='sheets/properties/title').execute()
         ranges = [sheet['properties']['title'] for sheet in sheets['sheets']]
@@ -153,6 +152,8 @@ def build_project_summary_list(links_df, weight_df, evaluationMappingSheetId):
 
             format_list = [project_number, project_name, evaluator, link, total_score, ECI_score, PPE_score, OQ_score, eval_link]
             total_list.append(format_list)
+            time.sleep(1)
+        time.sleep(3)
     return(total_list)
 
 
