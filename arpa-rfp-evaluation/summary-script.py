@@ -119,7 +119,7 @@ def build_project_summary_list(links_df, weight_df, evaluationMappingSheetId):
                 ECI_score = (cat_weights_global['Equitable Community Impact']/11) * 40
                 PPE_score = (cat_weights_global['Project Plan and Evaluation']/8) * 40
                 OQ_score = (cat_weights_global['Organizational Qualification']/9) * 20
-                total_score = ECI_score + PPE_score + OQ_score 
+                total_score = round(ECI_score + PPE_score + OQ_score, 2)
 
             #Grabbing info from list to put into the right output format
             project_name = values[1][1].split(": ",1)[1]
