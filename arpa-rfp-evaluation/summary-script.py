@@ -9,11 +9,8 @@ import numpy as np
 from functools import reduce
 import time
 
-
-
 SERVICE_ACCOUNT_FILE = None
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
-
 
 
 INPUTS_EVAL_MAPPING_ID =None
@@ -21,23 +18,16 @@ OUTPUTS_MASTER_ID = None
 INPUTS_SPREADSHEET_ID = None
 
 sheetService = None
-#driveService = None
-
-# Call the Sheets API
 
 #########################################################
 
-# The first function creates two dfs, one with links to projects, one with scoring weight info
-# Those dfs are passed to the second function, which goes through each sheet and calculates
-# the individual score 1 evaluator gives 1 project.
-# A list with that info is passed to the third function, which creates the summary list using
-# all of the evaluator's scores for each project.
+
 
 def setUpServices():
   global sheetService
   creds = service_account.Credentials.from_service_account_file( SERVICE_ACCOUNT_FILE, scopes=SCOPES )
   sheetService = build('sheets', 'v4', credentials=creds)
-  #driveService = build('drive', 'v3', credentials=creds)
+
 
 def grab_weights_and_links(inputSpreadsheetId):
     # Gets score weights from the evaluation sheet, and project links, and puts these things into 2
@@ -58,8 +48,8 @@ def grab_weights_and_links(inputSpreadsheetId):
     values = results.get('values', [])
     links_df = pd.DataFrame(values, columns=['project_number', 'project_name', 'project_link'])
 
-
     return(links_df, weight_df)
+
 
 def list_tab_links(evaluationMappingSheetId):
     sheet = sheetService.spreadsheets()
@@ -74,9 +64,7 @@ def list_tab_links(evaluationMappingSheetId):
 
 
 def build_project_summary_list(links_df, weight_df, evaluationMappingSheetId):
-
     tab_links_df = list_tab_links(evaluationMappingSheetId)
-
     # Get spreadsheet links/ids from the spreadsheet
     total_list = []
     sheet = sheetService.spreadsheets()
@@ -98,11 +86,6 @@ def build_project_summary_list(links_df, weight_df, evaluationMappingSheetId):
             results = sheet.values().get(spreadsheetId=id,range=tab +'!A1:E24').execute()
             values = results.get('values', [])
             data = values[6:]
-
-            # two paths, if else
-            #if df contains no nulls, calculate stats
-            #if df contains nulls, skip that step and add "Not Complete"
-
 
             #Make a dataframe, then change the rating values to numbers
             df = pd.DataFrame(data, columns = ["question_num", 'question', 'rating', 'guidance', 'scoring_category'])
@@ -129,10 +112,10 @@ def build_project_summary_list(links_df, weight_df, evaluationMappingSheetId):
                 cat_weights_global = df.groupby(['scoring_category']).category_rating.sum()
 
                 #Formatting output
-                # What are the 11, 8, and 9? They're the total of the "weight within category".
-                # That makes more sense if you take a look at the scoring sheet- 
-                # "Evaluation Score" Score Weighting tab, column 
-            
+                #What are the 11, 8, and 9? They're the total of the "weight within category".
+                #That makes more sense if you take a look at the scoring sheet- 
+                #"Evaluation Score" Score Weighting tab, column 
+                
                 ECI_score = (cat_weights_global['Equitable Community Impact']/11) * 40
                 PPE_score = (cat_weights_global['Project Plan and Evaluation']/8) * 40
                 OQ_score = (cat_weights_global['Organizational Qualification']/9) * 20
@@ -149,7 +132,6 @@ def build_project_summary_list(links_df, weight_df, evaluationMappingSheetId):
             # to individual tabs on evaluator sheets. Appending that to the end of the list.
             eval_link = tab_links_df[evaluator].iloc[int(project_number)-1]
 
-
             format_list = [project_number, project_name, evaluator, link, total_score, ECI_score, PPE_score, OQ_score, eval_link]
             total_list.append(format_list)
             time.sleep(1)
@@ -158,10 +140,10 @@ def build_project_summary_list(links_df, weight_df, evaluationMappingSheetId):
 
 
 def maxMinDifference(df):
-    #columnList = ['total_score', 'ECI_score', 'PPE_score', 'OQ_score']
-    #for entry in columnList:
+    #Get the links dataframe, merge the two together to be able to output links for each project
     df.merge(links_df['project_number'], on='project_number', how='left')
 
+    #Calculate the difference between the min and max score for each column
     maxMinDF = pd.DataFrame(df.groupby(['project_number', 'project_name'])['total_score'].agg(['max','min']))
     maxMinDF['totalScoreVaries'] = maxMinDF['max'] - maxMinDF['min']
     
@@ -174,11 +156,14 @@ def maxMinDifference(df):
     OQMaxMinDF = pd.DataFrame(df.groupby(['project_number', 'project_name'])['OQ_score'].agg(['max','min']))
     OQMaxMinDF['OQScoreVaries'] = maxMinDF['max'] - maxMinDF['min']
 
+    #Merge all these calculations together into one dataframe
     maxMinDF = maxMinDF.merge(ECIMaxMinDF['ECIScoreVaries'], on=['project_number', 'project_name'])
     maxMinDF = maxMinDF.merge(PPEMaxMinDF['PPEScoreVaries'], on=['project_number', 'project_name'])
     maxMinDF = maxMinDF.merge(OQMaxMinDF['OQScoreVaries'], on=['project_number', 'project_name'])
     maxMinDF.drop(['max', 'min'], axis=1, inplace=True)
     columnList = ['totalScoreVaries', 'ECIScoreVaries', 'PPEScoreVaries', 'OQScoreVaries']
+    #If the different is greater than 50, "True" is assigned, otherwise np.nan. This is so we can use .dropna to
+    #drop the rows which have all np.nans in them.
     for entry in columnList:
         maxMinDF[maxMinDF[entry] >= 50] = True
         maxMinDF[maxMinDF[entry] !=True] = np.nan
@@ -186,14 +171,9 @@ def maxMinDifference(df):
     maxMinDF = maxMinDF.replace(np.nan, '')
     maxMinDF = maxMinDF.reset_index()
 
-    #print(maxMinDF)
     maxMinList = maxMinDF.values.tolist()
     print(maxMinList)
     return(maxMinList)
-
-
-
-
 
 
 def summarize_all_project(my_list, links_df):
@@ -202,16 +182,13 @@ def summarize_all_project(my_list, links_df):
                     'total_score', 'ECI_score', 'PPE_score', 'OQ_score', 'eval_link'])
     my_df = my_df.round(2)
 
-
     #Calculating mean and median, renaming columsn and resetting index (so that project #s show up when converted to list)
-    #summary_df = pd.DataFrame(my_df.groupby(['project_number', 'project_name', 'link_to_proposal'])['total_score', 'ECI_score', 'PPE_score', 'OQ_score'].mean())
     numericScoreDF = my_df[pd.to_numeric(my_df['total_score'], errors='coerce').notnull()]
     numericScoreDF['total_score'] = numericScoreDF['total_score'].astype(float)
     numericScoreDF['ECI_score'] = numericScoreDF['ECI_score'].astype(float)
     numericScoreDF['PPE_score'] = numericScoreDF['PPE_score'].astype(float)
     numericScoreDF['OQ_score'] = numericScoreDF['OQ_score'].astype(float)
-    
-    
+        
     maxMinList = maxMinDifference(numericScoreDF)
 
     summary_df = pd.DataFrame(numericScoreDF.groupby(['project_number', 'project_name'])['total_score', 'ECI_score', 'PPE_score', 'OQ_score'].mean())
@@ -230,21 +207,15 @@ def summarize_all_project(my_list, links_df):
   
 
     # Merging the various dfs to create 1 summary
-    #summary_df=summary_df.merge(links_df, on='project_name')
     summary_df=summary_df.merge(median_df, on='project_name')
     summary_df=summary_df.merge(individual_score_list_df, on='project_name')
     summary_df = summary_df.merge(links_df[['project_number', 'project_link']], on='project_number', how='left')
     summary_df=summary_df.merge(eval_links_df, on='project_name')
 
-
-
     # Reordering columns so the info is in the correct order in the list 
     summary_df = summary_df[['project_number', 'project_name', 'project_link', 'median_score', 'total_score',
        'ECI_score', 'PPE_score', 'OQ_score', 'score_list', 'eval_link']]
-    #summary_df = summary_df.drop('link_to_proposal', 1)
     summary_df = summary_df.round(2)
-
-
 
     final_list = summary_df.values.tolist()
 
@@ -302,36 +273,8 @@ print('Summarize all the projects')
 list_to_append, maxMinList = summarize_all_project(all_project_scores, links_df)
 
 
-
-
 updateSheet(list_to_append, OUTPUTS_MASTER_ID, "Summary!A2:AA1000")
 updateSheet(maxMinList, OUTPUTS_MASTER_ID, "Potential Issues!A2:AA1000")
 
-#Update Spreadsheet
-#resource = {
-#  "majorDimension": "ROWS",
-#  "values": list_to_append
-#}
-
-#sheetService.spreadsheets().values().update(
-#  spreadsheetId=OUTPUTS_MASTER_ID,
-#  range="Summary!A2:AA1000",
-#  body=resource,
-#  valueInputOption="USER_ENTERED").execute()
-
 print('Finished, Party time')
 
-
-#############################################
-
-
-    # This bit of code gets list of files in google drive folder, grabs IDs
-    # We do not need it currently
-    # but it took me awhile to figure out
-    # and I can't bring myself to delete it yet
-
-
-    #results = drive_service.files().list(q = "'1iE_EuNlJqSA5fTFXIGI1WKtdIbT7IbdU' in parents", pageSize=10, fields="nextPageToken, files(id, name)").execute()
-    #items = results.get('files', [])
-    #for f in range(0, len(items)):
-    #    fId = items[f].get('id')
