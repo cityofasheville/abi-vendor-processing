@@ -123,7 +123,7 @@ def build_project_summary_list(links_df, weight_df, evaluationMappingSheetId):
 
             #Grabbing info from list to put into the right output format
             project_name = values[1][1].split(": ",1)[1]
-            project_number = project_name[0]
+            project_number = project_name.split(' ')[0]
             evaluator = values[0][1].split(": ",1)[1]
             evaluator=evaluator.strip()
             link = thing[2]
@@ -170,9 +170,8 @@ def maxMinDifference(df):
     maxMinDF = maxMinDF.dropna( how='all', subset=['totalScoreVaries', 'ECIScoreVaries', 'PPEScoreVaries', 'OQScoreVaries'])
     maxMinDF = maxMinDF.replace(np.nan, '')
     maxMinDF = maxMinDF.reset_index()
-
+    print(maxMinDF)
     maxMinList = maxMinDF.values.tolist()
-    print(maxMinList)
     return(maxMinList)
 
 
@@ -274,7 +273,7 @@ list_to_append, maxMinList = summarize_all_project(all_project_scores, links_df)
 
 
 updateSheet(list_to_append, OUTPUTS_MASTER_ID, "Summary!A2:AA1000")
-updateSheet(maxMinList, OUTPUTS_MASTER_ID, "Potential Issues!A2:AA1000")
+updateSheet(maxMinList, OUTPUTS_MASTER_ID, "Potential Issues!A3:AA1000")
 
 print('Finished, Party time')
 
