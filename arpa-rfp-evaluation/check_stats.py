@@ -56,7 +56,18 @@ def getQuestionMaxPoints():
     return(maxPoints)
 
 
-def readAllData(maxPoints):
+def getCurrentSummary():
+    global OUTPUTS_MASTER_ID
+    allData = {}
+    result = sheetService.spreadsheets().values().get(spreadsheetId=OUTPUTS_MASTER_ID,range='Summary!A2:I').execute().get('values', [])
+
+    currentSummary = {}
+
+    for row in result:
+        currentSummary[row[1]] = row
+    return currentSummary
+
+def readDataAndCompare(maxPoints, currentSummary):
     global OUTPUTS_MASTER_ID
     answerFactors = {
         'high': 1.0, 'medium': 2.0/3.0, 'low': 1.0/3.0, 'none': 0.0
@@ -74,15 +85,19 @@ def readAllData(maxPoints):
         qNum = int(row[4]) - 1
         allData[row[2]][row[0]] += answerFactors[row[6].strip().lower()] * maxPoints[qNum]
     out = [[
-      'Proposal', 'Median', 'Mean', 'Evaluator1', 'Evaluator2', 'Evaluator3', 'Evaluator4', 'Evaluator5'
+      'Proposal', 'Median1', 'Median2', 'MedDiff', 'Mean1', 'Mean2', 'MeanDiff', 'Scorelist', 'Evaluator1', 'Evaluator2', 'Evaluator3', 'Evaluator4', 'Evaluator5'
     ]]
     for proposal in allData:
         scores = []
         for review in allData[proposal]:
             scores.append(round(allData[proposal][review], 2))
+        orig = currentSummary[proposal]
+        omed = float(orig[3])
+        omean = float(orig[4])
         med = round(stat.median(scores), 2)
         mean = round(stat.mean(scores), 2)
-        row = [proposal, med, mean]
+        row = [proposal, med, omed, omed - med, mean, omean, omean-mean]
+        row.append(orig[8])
         row.extend(scores)
         out.append(row)
     return out
@@ -108,8 +123,9 @@ SERVICE_ACCOUNT_FILE = inputs["SERVICE_ACCOUNT_FILE"]
 setUpServices()
 
 maxPoints = getQuestionMaxPoints()
+currentSummary = getCurrentSummary()
 # Read in the detailed data
-allData = readAllData(maxPoints)
+allData = readDataAndCompare(maxPoints, currentSummary)
 
 # Update sheet
 resource = {
