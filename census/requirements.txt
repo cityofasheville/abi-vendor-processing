@@ -1,0 +1,5 @@
+requests
+pandas
+json
+os.path import exists
+csv import reader
