@@ -1,5 +1,5 @@
 # Script to Access Census APIs
-The script in this directory is used to grab census data from the group of census APIs. It currently work with the Decennial census and the ACS. It will likely work with other apis with minimal changes.
+The script in this directory is used to grab census data from the group of census APIs. It currently work with the Decennial census and the ACS. It will likely work with other APIs with minimal changes.
 
 To prepare to run, simply run the command: 
 ````
@@ -14,4 +14,4 @@ There's a jupyter notebook file as well, which shows how to filter through censu
 
 ## Formatting Census Data
 
-This script will format the data by replacing census codes with what they represent, if the CensusCodes.csv file is formatted correctly. If you need a slightly different format, you'll have to edit the script a bit.
+This script will format the data by replacing census codes with what they represent in the output csv, if the CensusCodes.csv file is formatted correctly. If you need a slightly different format, you'll have to edit the script.
