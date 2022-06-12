@@ -15,7 +15,7 @@ if exists('./keyfile.json'):
 
 key = secrets['API_KEY']
 
-# Getting inputs for api
+# Getting inputs for api for the inputs file
 if exists('./inputs.json'):
     with open('inputs.json', 'r') as file:
         inputs = json.load(file)
@@ -38,7 +38,7 @@ else:
     exit()
 
 
-#Getting the list of codes for which census tables we want
+#Getting the list of codes for which census tables we want from the csv
 with open('CensusCodes.csv', 'r') as read_obj:
     csv_reader = reader(read_obj)
     tablecodes = list(csv_reader)
@@ -47,9 +47,11 @@ with open('CensusCodes.csv', 'r') as read_obj:
 #------------------------------
 dfTotal = None
 
+#This loop goes through the list of codes and calls the api for each one, then appends the data in a dataframe
 for entry in tablecodes:
     code = entry[1]
-    url  = f'https://api.census.gov/data/{year}/{censustype}/{secondpart}{numberofyears}?get={code},NAME&for={geography}:*&in=state:{stateid}%20county:{countyid}&key={key}'
+    #url  = f'https://api.census.gov/data/{year}/{censustype}/{secondpart}{numberofyears}?get={code},NAME&for={geography}:*&in=state:{stateid}%20county:{countyid}&key={key}'
+    url  = f'https://api.census.gov/data/{year}/{censustype}/{secondpart}{numberofyears}?get=NAME,{code}&for={geography}:*&in=state:{stateid}%20county:{countyid}&key={key}'    
     response=requests.get(url)
     data = response.json()
     df = pd.DataFrame(data[1:], columns=data[0])
@@ -57,6 +59,8 @@ for entry in tablecodes:
     df['label'] = entry[2]
     df['race'] = entry[3]
     df = df.iloc[: , 1:]
+    df.rename(columns={df.columns[0]: "value" }, inplace = True)
+
     if dfTotal is None:
         dfTotal = df.copy()
     else:
