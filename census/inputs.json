@@ -1,0 +1,8 @@
+{
+    "YEAR": "<year>",
+    "GEOGRAPHY": "<tract, block group, etc. account for spaces with '%20'>",
+    "STATEID": "37",
+    "COUNTYID": "021",
+    "CENSUSTYPE": "<dec or acs>",
+    "NUMBEROFYEARS": "<number of years in estimate- ex. 5 years acs estimates>"
+}
